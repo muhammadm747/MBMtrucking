@@ -1,0 +1,6 @@
+/* Additions for the React/Django version; app.css is the original design system. */
+.tab { text-decoration: none; }
+.login-card { max-width: 420px; margin: 24px auto 0; }
+.login-card h2 { margin-bottom: 2px; }
+.login-card .btn.primary { width: 100%; }
+a.btn.primary { color: var(--on-cta); }
