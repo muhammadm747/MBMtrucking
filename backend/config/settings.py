@@ -31,6 +31,11 @@ ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 CSRF_TRUSTED_ORIGINS = env_list(
     "DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
 )
+# Render tells the app its public hostname; trust it without extra configuration.
+RENDER_HOST = env("RENDER_EXTERNAL_HOSTNAME")
+if RENDER_HOST:
+    ALLOWED_HOSTS.append(RENDER_HOST)
+    CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_HOST}")
 
 if not DEBUG and SECRET_KEY.startswith("dev-only"):
     raise RuntimeError("Set DJANGO_SECRET_KEY when DJANGO_DEBUG is off.")
@@ -77,12 +82,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": env("DJANGO_DB_PATH", str(BASE_DIR / "db.sqlite3")),
+# PostgreSQL in production via DATABASE_URL (e.g. Render); SQLite file otherwise.
+if env("DATABASE_URL"):
+    import dj_database_url
+
+    DATABASES = {"default": dj_database_url.config(conn_max_age=600, conn_health_checks=True)}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": env("DJANGO_DB_PATH", str(BASE_DIR / "db.sqlite3")),
+        }
     }
-}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
