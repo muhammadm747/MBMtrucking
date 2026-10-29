@@ -44,14 +44,9 @@ cd backend
 python manage.py collectstatic --noinput
 python manage.py migrate --noinput
 
-# First admin account from DJANGO_SUPERUSER_USERNAME / _EMAIL / _PASSWORD (skipped if it already exists).
-if [ -n "${DJANGO_SUPERUSER_USERNAME:-}" ]; then
-  if python manage.py shell -c "import os, sys; from django.contrib.auth import get_user_model; sys.exit(0 if get_user_model().objects.filter(username__iexact=os.environ['DJANGO_SUPERUSER_USERNAME']).exists() else 1)"; then
-    echo "Superuser '${DJANGO_SUPERUSER_USERNAME}' already exists, skipping."
-  else
-    python manage.py createsuperuser --noinput
-  fi
-fi
+# Admin account from DJANGO_SUPERUSER_USERNAME / _EMAIL / _PASSWORD: created on the first deploy,
+# and its password re-synced from DJANGO_SUPERUSER_PASSWORD on every deploy after that.
+python manage.py ensure_superuser
 
 # Original data from the artifact; only adds missing records, safe to run on every deploy.
 python manage.py import_backup ../data/backup-2026-10-27.json
