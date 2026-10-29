@@ -144,8 +144,11 @@ REST_FRAMEWORK = {
     "COERCE_DECIMAL_TO_STRING": False,
     "TIME_FORMAT": "%H:%M",
     "TIME_INPUT_FORMATS": ["%H:%M", "%H:%M:%S"],
-    "DEFAULT_THROTTLE_RATES": {"login": "10/min"},
+    "DEFAULT_THROTTLE_RATES": {"login": "10/min", "register": "10/hour"},
 }
+
+# Anyone can create an account (each one is a separate, empty company). Set false to close sign-up.
+ALLOW_SIGNUP = env_bool("DJANGO_ALLOW_SIGNUP", True)
 
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # stay signed in for 30 days
 SESSION_COOKIE_SAMESITE = "Lax"

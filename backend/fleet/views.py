@@ -19,6 +19,12 @@ class TruckViewSet(viewsets.ModelViewSet):
     queryset = Truck.objects.all()
     serializer_class = TruckSerializer
 
+    def get_queryset(self):
+        return super().get_queryset().filter(owner=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
     def destroy(self, request, *args, **kwargs):
         try:
             return super().destroy(request, *args, **kwargs)
@@ -32,15 +38,21 @@ class LoadViewSet(viewsets.ModelViewSet):
     queryset = Load.objects.select_related("truck")
     serializer_class = LoadSerializer
 
+    def get_queryset(self):
+        return super().get_queryset().filter(truck__owner=self.request.user)
+
 
 class ExpenseViewSet(viewsets.ModelViewSet):
     queryset = Expense.objects.select_related("truck")
     serializer_class = ExpenseSerializer
 
+    def get_queryset(self):
+        return super().get_queryset().filter(truck__owner=self.request.user)
+
 
 class BackupExportView(APIView):
     def get(self, request):
-        response = JsonResponse(export_backup(), json_dumps_params={"ensure_ascii": False, "indent": 1})
+        response = JsonResponse(export_backup(request.user), json_dumps_params={"ensure_ascii": False, "indent": 1})
         name = f"mbm-trucking-{timezone.localdate().isoformat()}.json"
         response["Content-Disposition"] = f'attachment; filename="{name}"'
         return response
@@ -63,7 +75,7 @@ class BackupImportView(APIView):
         else:
             data = request.data
         try:
-            result = import_backup(data)
+            result = import_backup(data, request.user)
         except BackupError as exc:
             return Response({"detail": "nothing_to_restore", "message": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(result.as_dict())

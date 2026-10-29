@@ -3,9 +3,11 @@ Backup export/import in the original MBM Trucking app's JSON format
 ({"app": "truck-hisob", "v": 1, "cfg": {...}, "loads": [...], "exps": [...]}),
 so files saved from the old Claude artifact can be restored here and vice versa.
 
-Import only ever adds: records whose id already exists are skipped, nothing is changed or deleted.
+Both work on one owner's fleet. Import only ever adds: records the owner already has are skipped,
+nothing is changed or deleted.
 """
 import datetime as dt
+import hashlib
 import re
 from dataclasses import asdict, dataclass
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
@@ -47,8 +49,8 @@ def _ms(value):
     return int(value.timestamp() * 1000)
 
 
-def export_backup():
-    trucks = list(Truck.objects.order_by("slot"))
+def export_backup(owner):
+    trucks = list(Truck.objects.filter(owner=owner).order_by("slot"))
     index = {t.pk: i for i, t in enumerate(trucks)}
     cfg = {
         "names": [t.name for t in trucks],
@@ -59,7 +61,7 @@ def export_backup():
         "dp": [float(t.dispatch_percent) for t in trucks],
     }
     loads = []
-    for load in Load.objects.order_by("pickup_date", "created_at"):
+    for load in Load.objects.filter(truck__owner=owner).order_by("pickup_date", "created_at"):
         row = {"id": load.id, "truck": index[load.truck_id], "miles": float(load.miles), "pay": float(load.pay),
                "created": _ms(load.created_at)}
         for prefix, key in (("pickup", "p"), ("delivery", "d")):
@@ -73,7 +75,7 @@ def export_backup():
     exps = [
         {"id": e.id, "truck": index[e.truck_id], "date": e.date.isoformat(), "type": e.category,
          "amount": float(e.amount), "created": _ms(e.created_at)}
-        for e in Expense.objects.order_by("date", "created_at")
+        for e in Expense.objects.filter(truck__owner=owner).order_by("date", "created_at")
     ]
     return {"app": APP_TAG, "v": 1, "exported": timezone.localdate().isoformat(), "cfg": cfg,
             "loads": loads, "exps": exps}
@@ -130,6 +132,11 @@ def _record_id(raw):
     return value if isinstance(value, str) and SAFE_ID.match(value) else new_id()
 
 
+def _owner_copy_id(record_id, owner):
+    """Stable id for an owner's copy of a record whose id another account already uses."""
+    return "c" + hashlib.sha1(f"{owner.pk}:{record_id}".encode()).hexdigest()[:23]
+
+
 def _truck_index(raw):
     n = _num(raw.get("truck"))
     if n is None or n != n.to_integral_value() or n < 0 or n > 999:
@@ -137,7 +144,7 @@ def _truck_index(raw):
     return int(n)
 
 
-def _truck_from_cfg(cfg, i):
+def _truck_from_cfg(cfg, i, owner):
     def pick(key, default):
         values = cfg.get(key)
         return values[i] if isinstance(values, list) and i < len(values) else default
@@ -149,6 +156,7 @@ def _truck_from_cfg(cfg, i):
     pay_type = pay_type if pay_type in Truck.DriverPay.values else Truck.DriverPay.NONE
     limit = Decimal(50) if pay_type == Truck.DriverPay.PER_MILE else Decimal(100)
     return Truck(
+        owner=owner,
         slot=i,
         name=name,
         monthly_rent=_money(pick("rent", 0), MAX_AMOUNT),
@@ -194,7 +202,7 @@ def _build_expense(raw, truck, record_id):
 
 
 @transaction.atomic
-def import_backup(data):
+def import_backup(data, owner):
     if not isinstance(data, dict):
         raise BackupError("Backup must be a JSON object.")
     raw_loads = data.get("loads") if isinstance(data.get("loads"), list) else []
@@ -204,12 +212,12 @@ def import_backup(data):
         raise BackupError("No loads, expenses or truck settings found in the file.")
 
     result = ImportResult()
-    trucks = {t.slot: t for t in Truck.objects.all()}
+    trucks = {t.slot: t for t in Truck.objects.filter(owner=owner)}
     fresh = not trucks
 
     def truck_at(i):
         if i not in trucks:
-            trucks[i] = _truck_from_cfg(cfg or {}, i)
+            trucks[i] = _truck_from_cfg(cfg or {}, i, owner)
             trucks[i].save()
             result.trucks_created += 1
         return trucks[i]
@@ -219,13 +227,17 @@ def import_backup(data):
         for i in range(len(cfg["names"])):
             truck_at(i)
 
-    have_loads = set(Load.objects.values_list("id", flat=True))
-    have_exps = set(Expense.objects.values_list("id", flat=True))
+    # Ids are global: one already used by another account is re-issued as a stable per-owner id,
+    # so importing the same file into a second account twice still adds it only once.
+    have_loads = set(Load.objects.filter(truck__owner=owner).values_list("id", flat=True))
+    have_exps = set(Expense.objects.filter(truck__owner=owner).values_list("id", flat=True))
+    taken_loads = set(Load.objects.values_list("id", flat=True))
+    taken_exps = set(Expense.objects.values_list("id", flat=True))
     new_loads, new_exps = [], []
 
-    for items, have, build, out in (
-        (raw_loads, have_loads, _build_load, new_loads),
-        (raw_exps, have_exps, _build_expense, new_exps),
+    for items, have, taken, build, out in (
+        (raw_loads, have_loads, taken_loads, _build_load, new_loads),
+        (raw_exps, have_exps, taken_exps, _build_expense, new_exps),
     ):
         for raw in items:
             index = _truck_index(raw) if isinstance(raw, dict) else None
@@ -233,15 +245,20 @@ def import_backup(data):
                 result.invalid += 1
                 continue
             record_id = _record_id(raw)
+            if record_id not in have and record_id in taken:
+                record_id = _owner_copy_id(record_id, owner)
             if record_id in have:
                 result.skipped += 1
                 continue
+            if record_id in taken:
+                record_id = new_id()
             record = build(raw, None, record_id)
             if record is None:
                 result.invalid += 1
                 continue
             record.truck = truck_at(index)
             have.add(record_id)
+            taken.add(record_id)
             out.append(record)
 
     Load.objects.bulk_create(new_loads)

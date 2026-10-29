@@ -7,11 +7,16 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const toast = useToast();
   const [state, setState] = useState({ status: 'checking', user: null });
+  const [signup, setSignup] = useState(false);
 
   useEffect(() => {
     let alive = true;
     endpoints.me()
-      .then((r) => alive && setState({ status: r.user ? 'authed' : 'anon', user: r.user }))
+      .then((r) => {
+        if (!alive) return;
+        setSignup(Boolean(r.signup));
+        setState({ status: r.user ? 'authed' : 'anon', user: r.user });
+      })
       .catch(() => alive && setState({ status: 'anon', user: null }));
     return () => { alive = false; };
   }, []);
@@ -31,11 +36,16 @@ export function AuthProvider({ children }) {
     setState({ status: 'authed', user: r.user });
   }, []);
 
+  const register = useCallback(async (fields) => {
+    const r = await endpoints.register(fields);
+    setState({ status: 'authed', user: r.user });
+  }, []);
+
   const logout = useCallback(async () => {
     try { await endpoints.logout(); } finally { setState({ status: 'anon', user: null }); }
   }, []);
 
-  const value = useMemo(() => ({ ...state, login, logout }), [state, login, logout]);
+  const value = useMemo(() => ({ ...state, signup, login, register, logout }), [state, signup, login, register, logout]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

@@ -19,7 +19,7 @@ class ApiTestCase(APITestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user("owner", password="pw-12345678")
         self.client.force_authenticate(self.user)
-        self.truck = Truck.objects.create(slot=0, name="1364")
+        self.truck = Truck.objects.create(owner=self.user, slot=0, name="1364")
 
 
 class AuthRequiredTests(APITestCase):
@@ -100,3 +100,44 @@ class ExpenseTests(ApiTestCase):
     def test_amount_must_be_positive(self):
         res = self.client.post("/api/expenses/", {"truck": self.truck.pk, "date": "2026-10-04", "category": "fuel", "amount": 0}, format="json")
         self.assertEqual(res.status_code, 400)
+
+
+class OwnershipTests(ApiTestCase):
+    """Each account is a separate company: nobody sees or touches another account's fleet."""
+
+    def setUp(self):
+        super().setUp()
+        self.other = get_user_model().objects.create_user("stranger", password="pw-12345678")
+        self.their_truck = Truck.objects.create(owner=self.other, slot=0, name="9999")
+        self.their_load = Load.objects.create(truck=self.their_truck, miles=100, pickup_date="2026-10-01", delivery_date="2026-10-02")
+        self.their_exp = Expense.objects.create(truck=self.their_truck, date="2026-10-01", category="fuel", amount=10)
+
+    def test_lists_show_only_own_records(self):
+        Load.objects.create(truck=self.truck, miles=50, pickup_date="2026-10-03", delivery_date="2026-10-03")
+        self.assertEqual([t["name"] for t in self.client.get("/api/trucks/").data], ["1364"])
+        self.assertEqual(len(self.client.get("/api/loads/").data), 1)
+        self.assertEqual(self.client.get("/api/expenses/").data, [])
+
+    def test_other_accounts_records_are_not_found(self):
+        for url in (f"/api/trucks/{self.their_truck.pk}/", f"/api/loads/{self.their_load.pk}/", f"/api/expenses/{self.their_exp.pk}/"):
+            self.assertEqual(self.client.get(url).status_code, 404, url)
+            self.assertEqual(self.client.patch(url, {}, format="json").status_code, 404, url)
+            self.assertEqual(self.client.delete(url).status_code, 404, url)
+        self.assertTrue(Load.objects.filter(pk=self.their_load.pk).exists())
+
+    def test_cannot_attach_records_to_another_accounts_truck(self):
+        res = self.client.post("/api/loads/", load_payload(self.their_truck), format="json")
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("truck", res.data)
+        res = self.client.post("/api/expenses/", {"truck": self.their_truck.pk, "date": "2026-10-04", "category": "fuel", "amount": 5}, format="json")
+        self.assertEqual(res.status_code, 400)
+
+    def test_new_truck_belongs_to_creator_and_slots_are_per_account(self):
+        res = self.client.post("/api/trucks/", {"name": "1365"}, format="json")
+        self.assertEqual(res.data["slot"], 1)  # the other account's slot 0 does not count
+        self.assertEqual(Truck.objects.get(pk=res.data["id"]).owner, self.user)
+
+    def test_slot_already_used_is_rejected(self):
+        res = self.client.post("/api/trucks/", {"name": "X", "slot": 0}, format="json")
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("slot", res.data)

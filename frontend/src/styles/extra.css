@@ -103,3 +103,13 @@ a.btn.primary { color: var(--on-cta); }
 .calcacts { display: flex; gap: 8px; }
 .calcacts .linkbtn { min-height: 38px; padding: 0 12px; font-size: 13.5px; }
 @media (max-width: 560px) { .row2.addrs { grid-template-columns: 1fr; } }
+
+/* ---------- sign in / sign up ---------- */
+.login-note { margin: -4px 0 0; font-size: 14px; line-height: 1.45; color: var(--fg-2); }
+.login-switch { margin: 2px 0 0; text-align: center; font-size: 14.5px; color: var(--fg-2); }
+.linkish {
+  padding: 4px 2px; border: 0; background: none; cursor: pointer;
+  font: inherit; font-weight: 700; color: var(--accent); text-decoration: underline; text-underline-offset: 3px;
+}
+.linkish:hover { text-decoration-thickness: 2px; }
+.fld input[aria-invalid="true"] { border-color: var(--loss); }

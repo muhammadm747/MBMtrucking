@@ -5,7 +5,7 @@ from pathlib import Path
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.test import TestCase
 from rest_framework.test import APITestCase
 
@@ -34,8 +34,11 @@ SAMPLE = {
 
 
 class ImportBackupTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user("owner", password="pw-12345678")
+
     def test_fresh_import_creates_trucks_and_records(self):
-        result = import_backup(SAMPLE)
+        result = import_backup(SAMPLE, self.user)
         self.assertEqual(result.loads_added, 2)
         self.assertEqual(result.expenses_added, 2)
         self.assertEqual(result.invalid, 2)
@@ -60,20 +63,20 @@ class ImportBackupTests(TestCase):
         self.assertEqual(Expense.objects.get(pk="weird-type").category, "other")
 
     def test_second_import_adds_nothing(self):
-        import_backup(SAMPLE)
-        result = import_backup(SAMPLE)
+        import_backup(SAMPLE, self.user)
+        result = import_backup(SAMPLE, self.user)
         self.assertEqual((result.loads_added, result.expenses_added, result.trucks_created), (0, 0, 0))
         self.assertEqual(result.skipped, 4)
         self.assertEqual(Load.objects.count(), 2)
 
     def test_existing_truck_settings_are_kept(self):
-        Truck.objects.create(slot=0, name="Mine", monthly_rent=99)
-        import_backup(SAMPLE)
+        Truck.objects.create(owner=self.user, slot=0, name="Mine", monthly_rent=99)
+        import_backup(SAMPLE, self.user)
         self.assertEqual(Truck.objects.get(slot=0).name, "Mine")
 
     def test_export_round_trip(self):
-        import_backup(SAMPLE)
-        exported = export_backup()
+        import_backup(SAMPLE, self.user)
+        exported = export_backup(self.user)
         self.assertEqual(exported["app"], "truck-hisob")
         self.assertEqual(exported["cfg"]["names"], ["1364", "1365", "Truck 5"])
         row = next(r for r in exported["loads"] if r["id"] == "muznd83rj18dds")
@@ -81,20 +84,37 @@ class ImportBackupTests(TestCase):
 
         Load.objects.all().delete()
         Expense.objects.all().delete()
-        result = import_backup(exported)
+        result = import_backup(exported, self.user)
         self.assertEqual((result.loads_added, result.expenses_added, result.invalid), (2, 2, 0))
 
     def test_empty_file_is_rejected(self):
         with self.assertRaises(BackupError):
-            import_backup({"loads": []})
+            import_backup({"loads": []}, self.user)
 
     def test_management_command(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "b.json"
             path.write_text(json.dumps(SAMPLE), encoding="utf-8")
             out = StringIO()
-            call_command("import_backup", str(path), stdout=out)
-        self.assertIn("loads added: 2", out.getvalue())
+            call_command("import_backup", str(path), "--owner", "OWNER", stdout=out)
+            self.assertIn("loads added: 2", out.getvalue())
+            self.assertEqual(Truck.objects.filter(owner=self.user).count(), 3)
+            with self.assertRaises(CommandError):
+                call_command("import_backup", str(path), "--owner", "nobody", stdout=StringIO())
+
+    def test_same_file_imported_by_two_accounts(self):
+        other = get_user_model().objects.create_user("other", password="pw-12345678")
+        import_backup(SAMPLE, self.user)
+        result = import_backup(SAMPLE, other)
+        # the other account gets its own copy (ids already taken are re-issued), not "already present"
+        self.assertEqual((result.loads_added, result.expenses_added, result.skipped), (2, 2, 0))
+        self.assertEqual(Load.objects.filter(truck__owner=self.user).count(), 2)
+        self.assertEqual(Load.objects.filter(truck__owner=other).count(), 2)
+        self.assertEqual(len(export_backup(other)["loads"]), 2)
+        # importing again adds nothing to either account
+        self.assertEqual(import_backup(SAMPLE, self.user).loads_added, 0)
+        again = import_backup(SAMPLE, other)
+        self.assertEqual((again.loads_added, again.expenses_added, again.skipped), (0, 0, 4))
 
 
 class BackupApiTests(APITestCase):

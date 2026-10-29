@@ -47,6 +47,7 @@ export async function api(path, { method = 'GET', body, form } = {}) {
 export const endpoints = {
   me: () => api('/auth/me/'),
   login: (username, password) => api('/auth/login/', { method: 'POST', body: { username, password } }),
+  register: (fields) => api('/auth/register/', { method: 'POST', body: fields }),
   logout: () => api('/auth/logout/', { method: 'POST' }),
 
   trucks: () => api('/trucks/'),

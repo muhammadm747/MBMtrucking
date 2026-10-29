@@ -2,6 +2,7 @@ import secrets
 import time
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -27,7 +28,9 @@ class Truck(models.Model):
         PER_MILE = "mile", "Per mile ($)"
         PERCENT = "pct", "Percent of load pay (%)"
 
-    slot = models.PositiveSmallIntegerField(unique=True, help_text="Display order (0 = first).")
+    # Every account is its own company: loads and expenses belong to an owner through their truck.
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="trucks")
+    slot = models.PositiveSmallIntegerField(help_text="Display order within the owner's fleet (0 = first).")
     name = models.CharField(max_length=30)
     monthly_rent = models.DecimalField(
         max_digits=10, decimal_places=2, default=0,
@@ -49,7 +52,8 @@ class Truck(models.Model):
     )
 
     class Meta:
-        ordering = ["slot"]
+        ordering = ["owner_id", "slot"]
+        constraints = [models.UniqueConstraint(fields=["owner", "slot"], name="truck_slot_unique_per_owner")]
 
     def __str__(self):
         return self.display_name

@@ -56,7 +56,7 @@ Admin panel: http://localhost:8000/admin/
 ## Testlar
 
 ```powershell
-cd backend;  .\.venv\Scripts\python.exe manage.py test   # 24 ta test: API, validatsiya, auth, zaxira
+cd backend;  .\.venv\Scripts\python.exe manage.py test   # 42 ta test: API, akkauntlar ajratilishi, validatsiya, auth, zaxira
 cd frontend; npm test                                     # 12 ta test: foyda/rent/driver hisob-kitobi
 ```
 
@@ -72,17 +72,28 @@ Keyin Django'ni WSGI server (masalan gunicorn/waitress) orqali HTTPS ortida ishg
 Muhit o'zgaruvchilari `backend/.env.example` da. Django `frontend/dist` dagi React ilovani o'zi beradi,
 shuning uchun alohida frontend server kerak emas.
 
+## Akkauntlar
+
+- Har kim saytda **ro'yxatdan o'tib** o'z akkauntini ochishi mumkin. Har bir akkaunt alohida kompaniya:
+  o'z truck'lari, yuklari va rasxodlari bor, boshqa akkauntlarning ma'lumotini ko'rmaydi.
+- Yangi akkaunt bo'sh boshlanadi. Zaxira fayl import qilinsa, ma'lumot faqat shu akkauntga qo'shiladi.
+- Ro'yxatdan o'tishni yopish: `DJANGO_ALLOW_SIGNUP=false`. Shunda akkauntlarni faqat admin `/admin/` da ochadi.
+- Admin akkaunti (`DJANGO_SUPERUSER_USERNAME` / `_PASSWORD`) har deployda `ensure_superuser` buyrug'i bilan
+  yaratiladi yoki paroli shu qiymatga moslanadi. Artifact'dagi asl ma'lumotlar shu akkauntga tegishli.
+
 ## API
 
-Hammasi login talab qiladi (session cookie + `X-CSRFToken`).
+Ro'yxatdan o'tish va kirishdan boshqa hammasi login talab qiladi (session cookie + `X-CSRFToken`)
+va faqat kirgan akkauntning ma'lumotlari bilan ishlaydi.
 
 | Yo'l | Vazifa |
 |---|---|
 | `GET /api/auth/me/` · `POST /api/auth/login/` · `POST /api/auth/logout/` | Kirish |
+| `POST /api/auth/register/` | Ro'yxatdan o'tish (login, email ixtiyoriy, parol) |
 | `/api/trucks/` | Truck'lar (nom, rent, to'lov kuni, driver maoshi, dispatch %) |
 | `/api/loads/` | Yuklar (pickup/delivery sana, vaqt turi, manzil, mile, pul) |
 | `/api/expenses/` | Rasxodlar (yoqilg'i, ta'mir, insurance, …) |
-| `GET /api/backup/export/` | Hamma ma'lumotni JSON fayl qilib yuklab olish |
+| `GET /api/backup/export/` | Akkauntning hamma ma'lumotini JSON fayl qilib yuklab olish |
 | `POST /api/backup/import/` | JSON fayldan tiklash (faqat qo'shadi) |
 
 Zaxira fayl formati eski Claude artifact bilan bir xil — u yerdan olingan fayllarni bu yerga tiklash mumkin va aksincha.

@@ -6,6 +6,13 @@ from rest_framework import serializers
 from .models import Expense, Load, StopType, Truck
 
 
+class OwnTruckField(serializers.PrimaryKeyRelatedField):
+    """A truck id, accepted only if the truck belongs to the signed-in user."""
+
+    def get_queryset(self):
+        return Truck.objects.filter(owner=self.context["request"].user)
+
+
 class TruckSerializer(serializers.ModelSerializer):
     slot = serializers.IntegerField(min_value=0, max_value=999, required=False)
     display_name = serializers.CharField(read_only=True)
@@ -23,6 +30,14 @@ class TruckSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Name is required.")
         return value
 
+    def validate_slot(self, value):
+        mine = Truck.objects.filter(owner=self.context["request"].user, slot=value)
+        if self.instance is not None:
+            mine = mine.exclude(pk=self.instance.pk)
+        if mine.exists():
+            raise serializers.ValidationError("slot_taken")
+        return value
+
     def validate(self, attrs):
         pay_type = attrs.get("driver_pay_type", getattr(self.instance, "driver_pay_type", Truck.DriverPay.NONE))
         rate = attrs.get("driver_rate", getattr(self.instance, "driver_rate", Decimal(0)))
@@ -36,7 +51,7 @@ class TruckSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         if "slot" not in validated_data:
-            top = Truck.objects.aggregate(m=Max("slot"))["m"]
+            top = Truck.objects.filter(owner=validated_data["owner"]).aggregate(m=Max("slot"))["m"]
             validated_data["slot"] = 0 if top is None else top + 1
         return super().create(validated_data)
 
@@ -52,7 +67,7 @@ def _stop_time(attrs, prefix):
 
 
 class LoadSerializer(serializers.ModelSerializer):
-    truck = serializers.PrimaryKeyRelatedField(queryset=Truck.objects.all())
+    truck = OwnTruckField()
 
     class Meta:
         model = Load
@@ -91,7 +106,7 @@ class LoadSerializer(serializers.ModelSerializer):
 
 
 class ExpenseSerializer(serializers.ModelSerializer):
-    truck = serializers.PrimaryKeyRelatedField(queryset=Truck.objects.all())
+    truck = OwnTruckField()
 
     class Meta:
         model = Expense
