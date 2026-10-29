@@ -46,7 +46,11 @@ python manage.py migrate --noinput
 
 # First admin account from DJANGO_SUPERUSER_USERNAME / _EMAIL / _PASSWORD (skipped if it already exists).
 if [ -n "${DJANGO_SUPERUSER_USERNAME:-}" ]; then
-  python manage.py createsuperuser --noinput || echo "Superuser already exists, skipping."
+  if python manage.py shell -c "import os, sys; from django.contrib.auth import get_user_model; sys.exit(0 if get_user_model().objects.filter(username__iexact=os.environ['DJANGO_SUPERUSER_USERNAME']).exists() else 1)"; then
+    echo "Superuser '${DJANGO_SUPERUSER_USERNAME}' already exists, skipping."
+  else
+    python manage.py createsuperuser --noinput
+  fi
 fi
 
 # Original data from the artifact; only adds missing records, safe to run on every deploy.
