@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 import { useI18n } from '../i18n/index.jsx';
 import { dowOf, todayNY } from '../lib/dates.js';
 import { useData } from '../state/DataContext.jsx';
@@ -17,69 +16,61 @@ const TABS = [
   ['/settings', 'settings', 'Sozlama'],
 ];
 
-function Header() {
-  const { t, lang, setLang, DOWF, monl } = useI18n();
+/** One compact sticky bar: brand + status, section links, language/theme. On phones the links move to a bottom tab bar. */
+function Navbar() {
+  const { t, lang, setLang, DOWF, MON } = useI18n();
   const { isDark, setTheme } = usePrefs();
   const { status } = useData();
   const today = todayNY();
   const other = lang === 'en' ? 'uz' : 'en';
   const themeLabel = t(isDark ? "Yorug' rejim" : 'Tungi rejim');
-  const ok = status === 'ready';
+  const statusText = t(status === 'ready' ? 'Serverga saqlanadi' : status === 'error' ? "Bazadan o'qib bo'lmadi" : 'Ulanmoqda');
   return (
-    <div className="band">
-      <div className="wrap">
-        <header className="hdr">
+    <header className="topbar">
+      <div className="topbar-in">
+        <NavLink to="/" className="brand" onClick={() => window.scrollTo(0, 0)}>
           <span className="mark" aria-hidden="true"><BrandMark /></span>
-          <div className="htxt">
-            <h1>MBM Trucking</h1>
-            <p id="todayLine">
-              {DOWF[dowOf(today)]}, {+today.slice(8, 10)} {monl(+today.slice(5, 7) - 1)} {today.slice(0, 4)} ·{' '}
-              <span className="nw">{t('New York vaqti')}</span>
-            </p>
-            <span className={'pill' + (ok ? '' : ' off')}>
-              <i aria-hidden="true" />
-              <span>{t(ok ? 'Serverga saqlanadi' : status === 'error' ? "Bazadan o'qib bo'lmadi" : 'Ulanmoqda')}</span>
-            </span>
-          </div>
-          <div className="hdr-tools">
-            <button className="tool" type="button" onClick={() => setLang(other)}
-              aria-label={other === 'en' ? 'English' : "O'zbekcha"} title={other === 'en' ? 'English' : "O'zbekcha"}>
-              <span>{other.toUpperCase()}</span>
-            </button>
-            <button className="tool" type="button" onClick={() => setTheme(isDark ? 'light' : 'dark')}
-              aria-label={themeLabel} title={themeLabel}>
-              {isDark ? <IconSun /> : <IconMoon />}
-            </button>
-          </div>
-        </header>
-      </div>
-    </div>
-  );
-}
-
-export default function Layout() {
-  const { t } = useI18n();
-  const { status, refresh } = useData();
-  const { pathname } = useLocation();
-  useEffect(() => { document.body.classList.toggle('inner', pathname !== '/'); }, [pathname]);
-  return (
-    <>
-      <Header />
-      <div className="tabbar">
-        <nav className="tabs" role="tablist" aria-label={t("Bo'limlar")}>
+          <span className="brand-txt">
+            <b>MBM Trucking</b>
+            <small title={statusText}>
+              <i className={'dot ' + status} aria-hidden="true" />
+              {DOWF[dowOf(today)].slice(0, 3)}, {+today.slice(8, 10)} {MON[+today.slice(5, 7) - 1]} · NY
+              <span className="sr-only"> · {statusText}</span>
+            </small>
+          </span>
+        </NavLink>
+        <nav className="nav" aria-label={t("Bo'limlar")}>
           {TABS.map(([to, key, label]) => {
             const Icon = TabIcons[key];
             return (
-              <NavLink key={key} to={to} end={to === '/'} role="tab" className="tab"
-                aria-selected={to === '/' ? pathname === '/' : pathname.startsWith(to)}
-                onClick={() => window.scrollTo(0, 0)}>
+              <NavLink key={key} to={to} end={to === '/'} onClick={() => window.scrollTo(0, 0)}>
                 <Icon />
                 <span>{t(label)}</span>
               </NavLink>
             );
           })}
         </nav>
+        <div className="tools">
+          <button className="tool" type="button" onClick={() => setLang(other)}
+            aria-label={other === 'en' ? 'English' : "O'zbekcha"} title={other === 'en' ? 'English' : "O'zbekcha"}>
+            <span>{other.toUpperCase()}</span>
+          </button>
+          <button className="tool" type="button" onClick={() => setTheme(isDark ? 'light' : 'dark')}
+            aria-label={themeLabel} title={themeLabel}>
+            {isDark ? <IconSun /> : <IconMoon />}
+          </button>
+        </div>
       </div>
+    </header>
+  );
+}
+
+export default function Layout() {
+  const { t } = useI18n();
+  const { status, refresh } = useData();
+  return (
+    <>
+      <Navbar />
       <main className="wrap">
         {status === 'error' ? (
           <section className="panel">

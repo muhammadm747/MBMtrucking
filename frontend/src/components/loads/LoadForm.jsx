@@ -9,6 +9,7 @@ import { useLoadUi } from '../../state/LoadUiContext.jsx';
 import { useToast } from '../../state/ToastContext.jsx';
 import { TruckPicker, useDialog } from '../common.jsx';
 import { IconClose } from '../Icons.jsx';
+import AddressInput from './AddressInput.jsx';
 
 const MAX_MILES = 20000;
 const MAX_AMOUNT = 1000000;
@@ -47,7 +48,8 @@ export default function LoadForm() {
   const [f, setF] = useState(null);
   const fRef = useRef(null);
   fRef.current = f;
-  const [moreOpen, setMoreOpen] = useState(false);
+  const coords = useRef({ pickup: null, delivery: null });
+  const lastKey = useRef('');
   const [calc, setCalc] = useState({ msg: '', cls: '', sub: '', running: false });
   const autoMiles = useRef('');
   const calcId = useRef(0);
@@ -65,7 +67,8 @@ export default function LoadForm() {
     const fallback = lastTruck.current && truckById.has(lastTruck.current) ? lastTruck.current : trucks[0] && trucks[0].id;
     const next = src ? fromLoad(src, req.mode === 'edit') : blankForm(fallback);
     setF(next);
-    setMoreOpen(!!(next.pickup_address || next.delivery_address));
+    coords.current = { pickup: null, delivery: null };
+    lastKey.current = next.pickup_address.trim() + '|' + next.delivery_address.trim();
     setCalc({ msg: '', cls: '', sub: '', running: false });
     autoMiles.current = '';
     calcId.current++;
@@ -84,21 +87,28 @@ export default function LoadForm() {
   const rpmText = milesN > 0 && Number.isFinite(payN) ? usd(payN / milesN) : '—';
   const bothAddr = f.pickup_address.trim() && f.delivery_address.trim();
 
-  async function calcMiles(manual) {
-    const a = f.pickup_address.trim(), b = f.delivery_address.trim();
+  /** Driving miles between the two addresses. Uses the coordinates of picked suggestions; geocodes typed text. */
+  async function calcMiles(manual, override = {}, quiet = false) {
+    const cur = { ...fRef.current, ...override };
+    const a = cur.pickup_address.trim(), b = cur.delivery_address.trim();
     if (!a || !b) {
-      if (manual) setCalc({ msg: t('Ikkala manzilni yozing'), cls: 'bad', sub: '', running: false });
+      if (manual && !quiet) setCalc({ msg: t('Ikkala manzilni yozing'), cls: 'bad', sub: '', running: false });
       return;
     }
+    const key = a + '|' + b;
+    if (!manual && key === lastKey.current) return; // already calculated for these two addresses
+    lastKey.current = key;
     const my = ++calcId.current;
     setCalc({ msg: t('Hisoblanmoqda...'), cls: '', sub: '', running: true });
     const done = (msg, cls, sub = '') => { if (my === calcId.current) setCalc({ msg, cls, sub, running: false }); };
     try {
-      const ga = await geocode(a);
+      const known = (p, text) => (coords.current[p] ? { ...coords.current[p], name: text } : null);
+      const ga = known('pickup', a) || await geocode(a);
       if (my !== calcId.current) return;
       if (!ga) return done(t('"{x}" topilmadi. Shahar va shtatni yozing (Dallas, TX).', { x: a }), 'bad');
-      if (!isCached(b)) await new Promise((r) => setTimeout(r, 1100)); // Nominatim: max 1 request/second
-      const gb = await geocode(b);
+      let gb = known('delivery', b);
+      if (!gb && !coords.current.pickup && !isCached(b)) await new Promise((r) => setTimeout(r, 1100)); // Nominatim: max 1 request/second
+      gb = gb || await geocode(b);
       if (my !== calcId.current) return;
       if (!gb) return done(t('"{x}" topilmadi. Shahar va shtatni yozing (Dallas, TX).', { x: b }), 'bad');
       const mi = await routeMiles(ga, gb);
@@ -120,8 +130,20 @@ export default function LoadForm() {
     }
   }
 
+  const setAddress = (p, v) => {
+    coords.current[p] = null;
+    set(p + '_address', v);
+  };
+
+  /** A suggestion was chosen: keep its coordinates and, once both stops are known, fill in the miles. */
+  const pickAddress = (p, it) => {
+    coords.current[p] = { lat: it.lat, lon: it.lon };
+    set(p + '_address', it.label);
+    calcMiles(true, { [p + '_address']: it.label }, true);
+  };
+
   const onAddrBlur = () => {
-    const cur = f.miles.trim();
+    const cur = fRef.current.miles.trim();
     if (!cur || cur === autoMiles.current) calcMiles(false);
   };
 
@@ -214,13 +236,37 @@ export default function LoadForm() {
           </div>
         </div>
 
-        <div className="top3">
-          <TruckPicker id="lTruck" label={t('Qaysi truck?')} trucks={trucks} value={f.truck} onChange={(v) => set('truck', v)} />
-          <label className="fld"><span>{t('Yuk puli ($)')}</span>
-            <input id="lPay" ref={payRef} type="text" inputMode="decimal" autoComplete="off" placeholder="2000" value={f.pay} onChange={(e) => set('pay', e.target.value)} onKeyDown={onEnter} />
-          </label>
+        <TruckPicker id="lTruck" label={t('Qaysi truck?')} trucks={trucks} value={f.truck} onChange={(v) => set('truck', v)} />
+
+        <div className="row2 addrs">
+          {STOPS.map((p) => (
+            <AddressInput key={p} id={p + 'Addr'} label={t(p === 'pickup' ? 'Pickup manzili' : 'Delivery manzili')}
+              value={f[p + '_address']} onChange={(v) => setAddress(p, v)} onPick={(it) => pickAddress(p, it)} onBlur={onAddrBlur} />
+          ))}
+        </div>
+        <div className="calcbar">
+          {(calc.msg || bothAddr) && (
+            <div className="calcline">
+              <p className={'calcmsg' + (calc.cls ? ' ' + calc.cls : '')} role="status" aria-live="polite">
+                {calc.running && <i className="addr-spin inline" aria-hidden="true" />}
+                {calc.msg}{calc.sub && <small>{calc.sub}</small>}
+              </p>
+              {bothAddr && (
+                <span className="calcacts">
+                  <button className="linkbtn" type="button" disabled={calc.running} onClick={() => calcMiles(true)}>{t('Mileni hisoblash')}</button>
+                  <a className="linkbtn" href={mapsUrl(f.pickup_address.trim(), f.delivery_address.trim())} target="_blank" rel="noopener noreferrer">Google Maps</a>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="row2">
           <label className="fld"><span>{t('Masofa (mile)')}</span>
             <input id="lMiles" type="text" inputMode="decimal" autoComplete="off" placeholder="850" value={f.miles} onChange={(e) => set('miles', e.target.value)} onKeyDown={onEnter} />
+          </label>
+          <label className="fld"><span>{t('Yuk puli ($)')}</span>
+            <input id="lPay" ref={payRef} type="text" inputMode="decimal" autoComplete="off" placeholder="2000" value={f.pay} onChange={(e) => set('pay', e.target.value)} onKeyDown={onEnter} />
           </label>
         </div>
         <div className="rpm"><span>{t('Bir mile uchun narx (RPM)')}</span><b className="num">{rpmText}</b></div>
@@ -233,31 +279,6 @@ export default function LoadForm() {
           {stopTimeFields('pickup')}
           {stopTimeFields('delivery')}
         </div>
-
-        <details className="more" id="moreD" open={moreOpen} onToggle={(e) => setMoreOpen(e.currentTarget.open)}>
-          <summary>{t('Manzil (ixtiyoriy)')}</summary>
-          <div className="moreb">
-            <label className="fld"><span>{t('Pickup manzili')}</span>
-              <input type="text" maxLength={200} autoComplete="off" placeholder={t('masalan Dallas, TX')} value={f.pickup_address}
-                onChange={(e) => set('pickup_address', e.target.value)} onBlur={onAddrBlur} />
-            </label>
-            <label className="fld"><span>{t('Delivery manzili')}</span>
-              <input type="text" maxLength={200} autoComplete="off" placeholder={t('masalan Dallas, TX')} value={f.delivery_address}
-                onChange={(e) => set('delivery_address', e.target.value)} onBlur={onAddrBlur} />
-            </label>
-            <div className="calcbar">
-              <div className="actions">
-                <button className="btn" type="button" disabled={calc.running} onClick={() => calcMiles(true)}>{t('Mileni hisoblash')}</button>
-                {bothAddr && (
-                  <a className="btn" href={mapsUrl(f.pickup_address.trim(), f.delivery_address.trim())} target="_blank" rel="noopener noreferrer">Google Maps</a>
-                )}
-              </div>
-              <p className={'calcmsg' + (calc.cls ? ' ' + calc.cls : '')} role="status" aria-live="polite">
-                {calc.msg}{calc.sub && <small>{calc.sub}</small>}
-              </p>
-            </div>
-          </div>
-        </details>
 
         <div className="actions">
           <button className="btn primary" type="button" disabled={busy} onClick={submit}>{t(editing ? "O'zgarishni saqlash" : "Yukni qo'shish")}</button>

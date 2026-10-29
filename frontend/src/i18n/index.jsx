@@ -29,6 +29,7 @@ const EN = {
   'Hali truck yo\'q. Avval truck qo\'shing.': 'No trucks yet. Add a truck first.',
   'Sahifa topilmadi': 'Page not found',
   '{t} ta truck yaratildi': '{t} trucks created',
+  'Manzil topilmadi': 'No address found',
 };
 
 const DATA = {

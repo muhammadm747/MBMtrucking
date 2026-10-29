@@ -28,6 +28,50 @@ export async function geocode(q) {
 
 export const isCached = (q) => cache.has(q.toLowerCase());
 
+const STATES = {
+  Alabama: 'AL', Alaska: 'AK', Arizona: 'AZ', Arkansas: 'AR', California: 'CA', Colorado: 'CO', Connecticut: 'CT',
+  Delaware: 'DE', 'District of Columbia': 'DC', Florida: 'FL', Georgia: 'GA', Hawaii: 'HI', Idaho: 'ID', Illinois: 'IL',
+  Indiana: 'IN', Iowa: 'IA', Kansas: 'KS', Kentucky: 'KY', Louisiana: 'LA', Maine: 'ME', Maryland: 'MD',
+  Massachusetts: 'MA', Michigan: 'MI', Minnesota: 'MN', Mississippi: 'MS', Missouri: 'MO', Montana: 'MT',
+  Nebraska: 'NE', Nevada: 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY',
+  'North Carolina': 'NC', 'North Dakota': 'ND', Ohio: 'OH', Oklahoma: 'OK', Oregon: 'OR', Pennsylvania: 'PA',
+  'Rhode Island': 'RI', 'South Carolina': 'SC', 'South Dakota': 'SD', Tennessee: 'TN', Texas: 'TX', Utah: 'UT',
+  Vermont: 'VT', Virginia: 'VA', Washington: 'WA', 'West Virginia': 'WV', Wisconsin: 'WI', Wyoming: 'WY',
+};
+const PLACE_TYPES = new Set(['city', 'town', 'village', 'hamlet', 'suburb', 'locality', 'county', 'state', 'postcode']);
+
+/**
+ * Address suggestions while typing (Photon / OpenStreetMap), limited to the US, Canada and Mexico.
+ * Returns [{label, sub, lat, lon}]: label is what goes into the field ("2242 Bushy Park Rd, Goose Creek, SC 29445").
+ */
+export async function suggest(q, signal) {
+  const url = 'https://photon.komoot.io/api/?limit=7&lang=en&bbox=-170,14,-50,72&q=' + encodeURIComponent(q);
+  const r = await fetch(url, { signal });
+  if (!r.ok) throw new Error('http ' + r.status);
+  const j = await r.json();
+  const seen = new Set();
+  const out = [];
+  for (const f of j.features || []) {
+    const p = f.properties || {};
+    if (!['US', 'CA', 'MX'].includes(p.countrycode)) continue;
+    const state = STATES[p.state] || p.state || '';
+    const street = p.street ? [p.housenumber, p.street].filter(Boolean).join(' ') : '';
+    const isPlace = PLACE_TYPES.has(p.osm_value) || PLACE_TYPES.has(p.type);
+    const head = isPlace ? p.name : street || p.name;
+    const town = isPlace ? '' : p.city || p.district || p.county || '';
+    const tail = [state, p.postcode].filter(Boolean).join(' ');
+    const label = [head, town, tail].filter(Boolean).join(', ');
+    if (!label || seen.has(label)) continue;
+    seen.add(label);
+    const sub = [!isPlace && street && p.name && p.name !== street ? p.name : '', p.osm_value === 'county' ? 'County' : '', p.countrycode !== 'US' ? p.country : '']
+      .filter(Boolean).join(' · ');
+    const [lon, lat] = f.geometry.coordinates;
+    out.push({ label, sub, lat, lon });
+    if (out.length === 5) break;
+  }
+  return out;
+}
+
 export async function routeMiles(a, b) {
   const j = await getJson(
     `https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=false&alternatives=false`,
