@@ -13,7 +13,8 @@ def spa(request):
         return FileResponse(index.open("rb"), content_type="text/html")
     return HttpResponse(
         "Frontend is not built yet. Run `npm run build` in frontend/, "
-        "or use the Vite dev server at http://localhost:5173 during development.",
+        "or use the Vite dev server at http://localhost:5173 during development.\n"
+        f"Looked for: {index}",
         content_type="text/plain",
         status=503,
     )

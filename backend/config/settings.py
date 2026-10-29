@@ -121,7 +121,12 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # The built React app (frontend/dist) is served by Django in production:
 # WhiteNoise serves its assets from the site root and config.urls returns index.html.
-FRONTEND_DIST = Path(env("FRONTEND_DIST", str(BASE_DIR.parent / "frontend" / "dist")))
+# build.sh also copies it to backend/spa, so the backend folder alone is enough to run.
+_frontend_candidates = [env("FRONTEND_DIST", ""), BASE_DIR.parent / "frontend" / "dist", BASE_DIR / "spa"]
+FRONTEND_DIST = next(
+    (Path(p) for p in _frontend_candidates if p and (Path(p) / "index.html").is_file()),
+    BASE_DIR.parent / "frontend" / "dist",
+)
 if FRONTEND_DIST.is_dir():
     WHITENOISE_ROOT = FRONTEND_DIST
 

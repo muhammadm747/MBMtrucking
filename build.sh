@@ -34,6 +34,12 @@ npm ci
 npm run build
 cd ..
 
+# Keep a copy of the built app inside backend/ (see FRONTEND_DIST in settings.py).
+test -f frontend/dist/index.html || { echo "XATO: frontend/dist/index.html yaratilmadi"; exit 1; }
+rm -rf backend/spa
+cp -r frontend/dist backend/spa
+echo "Frontend copied to backend/spa:" $(ls backend/spa)
+
 cd backend
 python manage.py collectstatic --noinput
 python manage.py migrate --noinput
