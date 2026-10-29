@@ -48,6 +48,10 @@ export const endpoints = {
   me: () => api('/auth/me/'),
   login: (username, password) => api('/auth/login/', { method: 'POST', body: { username, password } }),
   register: (fields) => api('/auth/register/', { method: 'POST', body: fields }),
+  updateProfile: (fields) => api('/auth/me/', { method: 'PATCH', body: fields }),
+  changePassword: (fields) => api('/auth/password/change/', { method: 'POST', body: fields }),
+  forgotPassword: (login) => api('/auth/password/forgot/', { method: 'POST', body: { login } }),
+  resetPassword: (fields) => api('/auth/password/reset/', { method: 'POST', body: fields }),
   logout: () => api('/auth/logout/', { method: 'POST' }),
 
   trucks: () => api('/trucks/'),

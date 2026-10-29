@@ -144,8 +144,26 @@ REST_FRAMEWORK = {
     "COERCE_DECIMAL_TO_STRING": False,
     "TIME_FORMAT": "%H:%M",
     "TIME_INPUT_FORMATS": ["%H:%M", "%H:%M:%S"],
-    "DEFAULT_THROTTLE_RATES": {"login": "10/min", "register": "10/hour"},
+    "DEFAULT_THROTTLE_RATES": {"login": "10/min", "register": "10/hour", "password_reset": "10/hour"},
 }
+
+# Email (password reset codes). Brevo's HTTPS API works where SMTP ports are blocked (Render free tier);
+# plain SMTP is the alternative; with neither, emails are printed to the server log.
+DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL", "MBM Trucking <noreply@localhost>")
+BREVO_API_KEY = env("BREVO_API_KEY", "")
+EMAIL_HOST = env("EMAIL_HOST", "")
+if BREVO_API_KEY:
+    EMAIL_BACKEND = "accounts.email_backends.BrevoEmailBackend"
+elif EMAIL_HOST:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_PORT = int(env("EMAIL_PORT", "587"))
+    EMAIL_HOST_USER = env("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
+    EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", EMAIL_PORT == 587)
+    EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", EMAIL_PORT == 465)
+    EMAIL_TIMEOUT = 15
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Anyone can create an account (each one is a separate, empty company). Set false to close sign-up.
 ALLOW_SIGNUP = env_bool("DJANGO_ALLOW_SIGNUP", True)

@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Skeleton } from './components/common.jsx';
 import Layout from './components/Layout.jsx';
+import AccountPage from './pages/AccountPage.jsx';
 import ExpensesPage from './pages/ExpensesPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import LoadsPage from './pages/LoadsPage.jsx';
@@ -26,6 +27,7 @@ export default function App() {
               <Route path="expenses" element={<ExpensesPage />} />
               <Route path="report" element={<ReportPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="account" element={<AccountPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

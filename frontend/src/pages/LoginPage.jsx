@@ -1,31 +1,31 @@
 import { useState } from 'react';
 import { BrandMark } from '../components/Icons.jsx';
 import { useI18n } from '../i18n/index.jsx';
+import { authError, NETWORK_ERROR } from '../lib/authErrors.js';
+import { endpoints } from '../api/client.js';
 import { useAuth } from '../state/AuthContext.jsx';
 
-const NETWORK = "Serverga ulanib bo'lmadi. Internetni tekshiring.";
-
-// Server error codes from /api/auth/register/ -> messages (Uzbek source strings, translated by t()).
-const FIELD_ERRORS = {
-  username_taken: 'Bu login band. Boshqasini tanlang.',
-  username_invalid: "Login faqat harf, raqam va @ . + - _ belgilaridan iborat bo'lsin.",
-  password_too_short: "Parol kamida 8 belgidan iborat bo'lsin.",
-  password_too_common: 'Bu parol juda oddiy.',
-  password_entirely_numeric: "Parol faqat raqamlardan iborat bo'lmasin.",
-  password_too_similar: 'Parol loginga juda o\'xshash.',
-  invalid: "Email noto'g'ri.",
-};
-
-function firstError(data) {
-  if (!data || typeof data !== 'object') return '';
-  for (const key of ['username', 'email', 'password']) {
-    const list = data[key];
-    if (Array.isArray(list) && list.length) return FIELD_ERRORS[list[0]] || (key === 'email' ? FIELD_ERRORS.invalid : list[0]);
-  }
-  return '';
+function PasswordPair({ value, onChange, label = 'Parol' }) {
+  const { t } = useI18n();
+  const mismatch = value.password2 !== '' && value.password !== value.password2;
+  return (
+    <>
+      <label className="fld"><span>{t(label)} <small>({t('kamida 8 belgi')})</small></span>
+        <input type="password" name="new-password" autoComplete="new-password" required minLength={8}
+          value={value.password} onChange={(e) => onChange({ ...value, password: e.target.value })} />
+      </label>
+      <label className="fld"><span>{t('Parolni takrorlang')}</span>
+        <input type="password" name="new-password2" autoComplete="new-password" required aria-invalid={mismatch}
+          value={value.password2} onChange={(e) => onChange({ ...value, password2: e.target.value })} />
+      </label>
+      {mismatch && <p className="calcmsg bad" role="alert">{t('Parollar bir xil emas.')}</p>}
+    </>
+  );
 }
 
-function LoginForm({ onSwitch }) {
+const pairReady = (p) => p.password.length >= 8 && p.password === p.password2;
+
+function LoginForm({ go }) {
   const { t } = useI18n();
   const { login, signup } = useAuth();
   const [username, setUsername] = useState('');
@@ -42,7 +42,7 @@ function LoginForm({ onSwitch }) {
       await login(username.trim(), password);
     } catch (err) {
       setError(err.status === 429 ? "Juda ko'p urinish. Bir daqiqadan keyin qayta urinib ko'ring."
-        : err.status === 0 || err.status >= 500 ? NETWORK : "Login yoki parol noto'g'ri");
+        : err.status === 0 || err.status >= 500 ? NETWORK_ERROR : "Login yoki parol noto'g'ri");
       setBusy(false);
     }
   }
@@ -56,37 +56,41 @@ function LoginForm({ onSwitch }) {
       <label className="fld"><span>{t('Parol')}</span>
         <input type="password" name="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
       </label>
-      {error && <p className="calcmsg bad" role="alert">{t(error)}</p>}
+      {error && (
+        <p className="calcmsg bad" role="alert">
+          {t(error)}
+          {error === "Login yoki parol noto'g'ri" && (
+            <> <button type="button" className="linkish" onClick={() => go('forgot', username.trim())}>{t('Parolni tiklash')}</button></>
+          )}
+        </p>
+      )}
       <button className="btn primary" type="submit" disabled={busy || !username.trim() || !password}>{t('Kirish')}</button>
+      <p className="login-switch"><button type="button" className="linkish" onClick={() => go('forgot', username.trim())}>{t('Parolni unutdingizmi?')}</button></p>
       {signup && (
-        <p className="login-switch">{t("Hisobingiz yo'qmi?")} <button type="button" className="linkish" onClick={onSwitch}>{t("Ro'yxatdan o'tish")}</button></p>
+        <p className="login-switch">{t("Hisobingiz yo'qmi?")} <button type="button" className="linkish" onClick={() => go('register')}>{t("Ro'yxatdan o'tish")}</button></p>
       )}
     </form>
   );
 }
 
-function RegisterForm({ onSwitch }) {
+function RegisterForm({ go }) {
   const { t } = useI18n();
   const { register } = useAuth();
-  const [f, setF] = useState({ username: '', email: '', password: '', password2: '' });
+  const [f, setF] = useState({ username: '', email: '' });
+  const [pw, setPw] = useState({ password: '', password2: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }));
-  const mismatch = f.password2 !== '' && f.password !== f.password2;
 
   async function submit(e) {
     e.preventDefault();
-    if (busy) return;
-    if (f.password !== f.password2) { setError('Parollar bir xil emas.'); return; }
+    if (busy || !pairReady(pw)) return;
     setBusy(true);
     setError('');
     try {
-      await register({ username: f.username.trim(), email: f.email.trim(), password: f.password });
+      await register({ username: f.username.trim(), email: f.email.trim(), password: pw.password });
     } catch (err) {
-      setError(err.status === 429 ? "Juda ko'p urinish. Keyinroq qayta urinib ko'ring."
-        : err.status === 403 ? "Ro'yxatdan o'tish hozir yopiq."
-        : err.status === 0 || err.status >= 500 ? NETWORK
-        : firstError(err.data) || "Ma'lumotlarni tekshiring.");
+      setError(err.status === 403 ? "Ro'yxatdan o'tish hozir yopiq." : authError(err, ['username', 'email', 'password']));
       setBusy(false);
     }
   }
@@ -98,20 +102,89 @@ function RegisterForm({ onSwitch }) {
       <label className="fld"><span>{t('Login')}</span>
         <input type="text" name="username" autoComplete="username" autoCapitalize="none" required minLength={3} maxLength={150} value={f.username} onChange={set('username')} autoFocus />
       </label>
-      <label className="fld"><span>Email <small>({t('ixtiyoriy')})</small></span>
+      <label className="fld"><span>Email <small>({t('parolni tiklash uchun kerak')})</small></span>
         <input type="email" name="email" autoComplete="email" value={f.email} onChange={set('email')} />
       </label>
-      <label className="fld"><span>{t('Parol')} <small>({t('kamida 8 belgi')})</small></span>
-        <input type="password" name="new-password" autoComplete="new-password" required minLength={8} value={f.password} onChange={set('password')} />
-      </label>
-      <label className="fld"><span>{t('Parolni takrorlang')}</span>
-        <input type="password" name="new-password2" autoComplete="new-password" required value={f.password2} onChange={set('password2')} aria-invalid={mismatch} />
-      </label>
-      {(error || mismatch) && <p className="calcmsg bad" role="alert">{t(error || 'Parollar bir xil emas.')}</p>}
-      <button className="btn primary" type="submit" disabled={busy || f.username.trim().length < 3 || f.password.length < 8 || mismatch || !f.password2}>
-        {t("Hisob ochish")}
+      <PasswordPair value={pw} onChange={setPw} />
+      {error && <p className="calcmsg bad" role="alert">{t(error)}</p>}
+      <button className="btn primary" type="submit" disabled={busy || f.username.trim().length < 3 || !pairReady(pw)}>
+        {t('Hisob ochish')}
       </button>
-      <p className="login-switch">{t('Hisobingiz bormi?')} <button type="button" className="linkish" onClick={onSwitch}>{t('Kirish')}</button></p>
+      <p className="login-switch">{t('Hisobingiz bormi?')} <button type="button" className="linkish" onClick={() => go('login')}>{t('Kirish')}</button></p>
+    </form>
+  );
+}
+
+/** Two steps: send a 6-digit code to the account's email, then enter it with a new password. */
+function ForgotForm({ go, initialLogin }) {
+  const { t } = useI18n();
+  const { resetPassword } = useAuth();
+  const [step, setStep] = useState('ask');
+  const [loginValue, setLoginValue] = useState(initialLogin || '');
+  const [code, setCode] = useState('');
+  const [pw, setPw] = useState({ password: '', password2: '' });
+  const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function send(e) {
+    if (e) e.preventDefault();
+    if (busy || !loginValue.trim()) return;
+    setBusy(true);
+    setError('');
+    try {
+      await endpoints.forgotPassword(loginValue.trim());
+      setStep('code');
+      setInfo("Agar bu akkauntga email biriktirilgan bo'lsa, 6 xonali kod yuborildi. Pochtangizni (Spam papkasini ham) tekshiring.");
+    } catch (err) {
+      setError(authError(err));
+    }
+    setBusy(false);
+  }
+
+  async function reset(e) {
+    e.preventDefault();
+    if (busy || !pairReady(pw)) return;
+    setBusy(true);
+    setError('');
+    try {
+      await resetPassword({ login: loginValue.trim(), code: code.trim(), password: pw.password });
+    } catch (err) {
+      setError(authError(err, ['code', 'password']));
+      setBusy(false);
+    }
+  }
+
+  if (step === 'ask') {
+    return (
+      <form className="card login-card" onSubmit={send} noValidate>
+        <h2>{t('Parolni tiklash')}</h2>
+        <p className="login-note">{t('Login yoki emailingizni kiriting. Akkauntga biriktirilgan emailga tasdiqlash kodi yuboramiz.')}</p>
+        <label className="fld"><span>{t('Login yoki email')}</span>
+          <input type="text" name="username" autoComplete="username" autoCapitalize="none" required value={loginValue} onChange={(e) => setLoginValue(e.target.value)} autoFocus />
+        </label>
+        {error && <p className="calcmsg bad" role="alert">{t(error)}</p>}
+        <button className="btn primary" type="submit" disabled={busy || !loginValue.trim()}>{t('Kod yuborish')}</button>
+        <p className="login-switch"><button type="button" className="linkish" onClick={() => go('login')}>{t('Kirish sahifasiga qaytish')}</button></p>
+      </form>
+    );
+  }
+
+  return (
+    <form className="card login-card" onSubmit={reset} noValidate>
+      <h2>{t('Yangi parol')}</h2>
+      {info && <p className="login-note">{t(info)}</p>}
+      <label className="fld"><span>{t('Emaildagi kod')}</span>
+        <input className="code-input" type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required
+          value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} autoFocus placeholder="••••••" />
+      </label>
+      <PasswordPair value={pw} onChange={setPw} label="Yangi parol" />
+      {error && <p className="calcmsg bad" role="alert">{t(error)}</p>}
+      <button className="btn primary" type="submit" disabled={busy || code.length !== 6 || !pairReady(pw)}>{t('Parolni saqlash va kirish')}</button>
+      <p className="login-switch">
+        {t('Kod kelmadimi?')} <button type="button" className="linkish" disabled={busy} onClick={() => send()}>{t('Qayta yuborish')}</button>
+      </p>
+      <p className="login-switch"><button type="button" className="linkish" onClick={() => go('login')}>{t('Kirish sahifasiga qaytish')}</button></p>
     </form>
   );
 }
@@ -119,8 +192,10 @@ function RegisterForm({ onSwitch }) {
 export default function LoginPage() {
   const { t, lang, setLang } = useI18n();
   const { signup } = useAuth();
-  const [mode, setMode] = useState('login');
-  const registering = signup && mode === 'register';
+  const [view, setView] = useState({ mode: 'login', login: '' });
+  const go = (mode, login = '') => setView({ mode, login });
+  const mode = view.mode === 'register' && !signup ? 'login' : view.mode;
+  const subtitle = { login: 'Hisobga kiring', register: 'Yangi hisob oching', forgot: 'Parolni tiklash' }[mode];
 
   return (
     <div className="login">
@@ -128,7 +203,7 @@ export default function LoginPage() {
         <div className="wrap">
           <header className="hdr">
             <span className="mark" aria-hidden="true"><BrandMark /></span>
-            <div className="htxt"><h1>MBM Trucking</h1><p>{t(registering ? 'Yangi hisob oching' : 'Hisobga kiring')}</p></div>
+            <div className="htxt"><h1>MBM Trucking</h1><p>{t(subtitle)}</p></div>
             <div className="hdr-tools">
               <button className="tool" type="button" onClick={() => setLang(lang === 'en' ? 'uz' : 'en')}>{lang === 'en' ? 'UZ' : 'EN'}</button>
             </div>
@@ -136,9 +211,9 @@ export default function LoginPage() {
         </div>
       </div>
       <main className="wrap">
-        {registering
-          ? <RegisterForm onSwitch={() => setMode('login')} />
-          : <LoginForm onSwitch={() => setMode('register')} />}
+        {mode === 'register' && <RegisterForm go={go} />}
+        {mode === 'forgot' && <ForgotForm go={go} initialLogin={view.login} />}
+        {mode === 'login' && <LoginForm go={go} />}
       </main>
     </div>
   );

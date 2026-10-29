@@ -56,7 +56,7 @@ Admin panel: http://localhost:8000/admin/
 ## Testlar
 
 ```powershell
-cd backend;  .\.venv\Scripts\python.exe manage.py test   # 42 ta test: API, akkauntlar ajratilishi, validatsiya, auth, zaxira
+cd backend;  .\.venv\Scripts\python.exe manage.py test   # 55 ta test: API, akkauntlar, parol tiklash, validatsiya, zaxira
 cd frontend; npm test                                     # 12 ta test: foyda/rent/driver hisob-kitobi
 ```
 
@@ -78,6 +78,13 @@ shuning uchun alohida frontend server kerak emas.
   o'z truck'lari, yuklari va rasxodlari bor, boshqa akkauntlarning ma'lumotini ko'rmaydi.
 - Yangi akkaunt bo'sh boshlanadi. Zaxira fayl import qilinsa, ma'lumot faqat shu akkauntga qo'shiladi.
 - Ro'yxatdan o'tishni yopish: `DJANGO_ALLOW_SIGNUP=false`. Shunda akkauntlarni faqat admin `/admin/` da ochadi.
+- Navbardagi akkaunt tugmasi (ism bosh harfi): akkaunt sozlamalari (email, parolni o'zgartirish),
+  boshqa akkauntga kirish va chiqish.
+- **Parolni unutganda:** kirish sahifasida "Parolni unutdingizmi?" → login yoki email → emailga 6 xonali kod
+  (15 daqiqa amal qiladi, 5 marta noto'g'ri kiritilsa bekor bo'ladi) → yangi parol. Faqat email kiritilgan
+  akkauntlar tiklanadi.
+- Email yuborish: `BREVO_API_KEY` (tavsiya, Render bepul tarifida SMTP portlari yopiq) yoki `EMAIL_HOST` va boshqa
+  SMTP sozlamalari. Ikkalasi ham bo'lmasa, xat server log'iga chiqadi. Yuboruvchi: `DJANGO_DEFAULT_FROM_EMAIL`.
 - Admin akkaunti (`DJANGO_SUPERUSER_USERNAME` / `_PASSWORD`) har deployda `ensure_superuser` buyrug'i bilan
   yaratiladi yoki paroli shu qiymatga moslanadi. Artifact'dagi asl ma'lumotlar shu akkauntga tegishli.
 
@@ -90,6 +97,8 @@ va faqat kirgan akkauntning ma'lumotlari bilan ishlaydi.
 |---|---|
 | `GET /api/auth/me/` · `POST /api/auth/login/` · `POST /api/auth/logout/` | Kirish |
 | `POST /api/auth/register/` | Ro'yxatdan o'tish (login, email ixtiyoriy, parol) |
+| `PATCH /api/auth/me/` · `POST /api/auth/password/change/` | Emailni va parolni o'zgartirish |
+| `POST /api/auth/password/forgot/` · `POST /api/auth/password/reset/` | Emailga kod yuborish va u bilan yangi parol qo'yish |
 | `/api/trucks/` | Truck'lar (nom, rent, to'lov kuni, driver maoshi, dispatch %) |
 | `/api/loads/` | Yuklar (pickup/delivery sana, vaqt turi, manzil, mile, pul) |
 | `/api/expenses/` | Rasxodlar (yoqilg'i, ta'mir, insurance, …) |

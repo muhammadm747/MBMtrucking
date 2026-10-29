@@ -41,11 +41,24 @@ export function AuthProvider({ children }) {
     setState({ status: 'authed', user: r.user });
   }, []);
 
+  const resetPassword = useCallback(async (fields) => {
+    const r = await endpoints.resetPassword(fields);
+    setState({ status: 'authed', user: r.user });
+  }, []);
+
+  const updateProfile = useCallback(async (fields) => {
+    const r = await endpoints.updateProfile(fields);
+    setState((s) => ({ ...s, user: r.user }));
+  }, []);
+
   const logout = useCallback(async () => {
     try { await endpoints.logout(); } finally { setState({ status: 'anon', user: null }); }
   }, []);
 
-  const value = useMemo(() => ({ ...state, signup, login, register, logout }), [state, signup, login, register, logout]);
+  const value = useMemo(
+    () => ({ ...state, signup, login, register, resetPassword, updateProfile, logout }),
+    [state, signup, login, register, resetPassword, updateProfile, logout],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { TruckPicker } from '../components/common.jsx';
 import { IconTruckMini } from '../components/Icons.jsx';
 import { endpoints } from '../api/client.js';
@@ -266,7 +267,10 @@ export default function SettingsPage() {
       <div className="card">
         <div className="sech"><h2>{t('Hisob')}</h2></div>
         <p className="hint">{t('Kirgan: {x}', { x: user ? user.name : '—' })}</p>
-        <div className="actions"><button className="btn" type="button" onClick={logout}>{t('Chiqish')}</button></div>
+        <div className="actions">
+          <Link className="btn" to="/account">{t('Akkaunt sozlamalari')}</Link>
+          <button className="btn" type="button" onClick={logout}>{t('Chiqish')}</button>
+        </div>
       </div>
     </section>
   );

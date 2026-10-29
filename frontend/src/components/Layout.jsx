@@ -3,6 +3,7 @@ import { useI18n } from '../i18n/index.jsx';
 import { dowOf, todayNY } from '../lib/dates.js';
 import { useData } from '../state/DataContext.jsx';
 import { usePrefs } from '../state/PrefsContext.jsx';
+import AccountMenu from './AccountMenu.jsx';
 import { EmptyBox } from './common.jsx';
 import { BrandMark, IconMoon, IconSun, TabIcons } from './Icons.jsx';
 import LoadForm from './loads/LoadForm.jsx';
@@ -59,6 +60,7 @@ function Navbar() {
             aria-label={themeLabel} title={themeLabel}>
             {isDark ? <IconSun /> : <IconMoon />}
           </button>
+          <AccountMenu />
         </div>
       </div>
     </header>
