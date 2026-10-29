@@ -85,8 +85,9 @@ shuning uchun alohida frontend server kerak emas.
   akkauntlar tiklanadi.
 - Email yuborish: `BREVO_API_KEY` (tavsiya, Render bepul tarifida SMTP portlari yopiq) yoki `EMAIL_HOST` va boshqa
   SMTP sozlamalari. Ikkalasi ham bo'lmasa, xat server log'iga chiqadi. Yuboruvchi: `DJANGO_DEFAULT_FROM_EMAIL`.
-- Admin akkaunti (`DJANGO_SUPERUSER_USERNAME` / `_PASSWORD`) har deployda `ensure_superuser` buyrug'i bilan
-  yaratiladi yoki paroli shu qiymatga moslanadi. Artifact'dagi asl ma'lumotlar shu akkauntga tegishli.
+- Admin akkaunti (`DJANGO_SUPERUSER_USERNAME` / `_PASSWORD`) birinchi deployda `ensure_superuser` buyrug'i bilan
+  yaratiladi. Keyingi deploylar parolga tegmaydi (saytda o'zgartirilgan yoki email orqali tiklangan parol saqlanadi).
+  Parolni Render'dan majburan qo'yish kerak bo'lsa: bitta deploy uchun `DJANGO_SUPERUSER_RESET_PASSWORD=true`. Artifact'dagi asl ma'lumotlar shu akkauntga tegishli.
 
 ## API
 

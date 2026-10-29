@@ -44,8 +44,8 @@ cd backend
 python manage.py collectstatic --noinput
 python manage.py migrate --noinput
 
-# Admin account from DJANGO_SUPERUSER_USERNAME / _EMAIL / _PASSWORD: created on the first deploy,
-# and its password re-synced from DJANGO_SUPERUSER_PASSWORD on every deploy after that.
+# Admin account from DJANGO_SUPERUSER_USERNAME / _EMAIL / _PASSWORD, created on the first deploy.
+# Later deploys keep its password; set DJANGO_SUPERUSER_RESET_PASSWORD=true for one deploy to force it.
 python manage.py ensure_superuser
 
 # Original data from the artifact; only adds missing records, safe to run on every deploy.
