@@ -7,6 +7,8 @@ so the same code runs locally (SQLite, DEBUG) and in production.
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -83,10 +85,16 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 # PostgreSQL in production via DATABASE_URL (e.g. Render); SQLite file otherwise.
-if env("DATABASE_URL"):
+if env("DATABASE_URL", "").strip():
     import dj_database_url
 
-    DATABASES = {"default": dj_database_url.config(conn_max_age=600, conn_health_checks=True)}
+    _db = dj_database_url.parse(env("DATABASE_URL", "").strip(), conn_max_age=600, conn_health_checks=True)
+    if not _db.get("NAME"):
+        raise ImproperlyConfigured(
+            "DATABASE_URL is incomplete: it must look like postgresql://user:password@host/dbname "
+            "(copy the whole 'Internal Database URL' from the Render database page)."
+        )
+    DATABASES = {"default": _db}
 else:
     DATABASES = {
         "default": {

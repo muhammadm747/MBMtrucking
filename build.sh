@@ -13,6 +13,20 @@ if [ -n "${RENDER:-}" ] && [ -z "${DATABASE_URL:-}" ]; then
   exit 1
 fi
 
+# The URL must be complete: postgresql://user:password@host/dbname (no spaces, no quotes).
+if [ -n "${RENDER:-}" ] && ! [[ "$DATABASE_URL" =~ ^postgres(ql)?://[^[:space:]/]+@[^[:space:]/]+/[^[:space:]/?]+ ]]; then
+  echo "=================================================================="
+  echo " XATO: DATABASE_URL noto'g'ri yoki to'liq emas."
+  echo " Hozir yozilgani (parol yashirilgan):"
+  echo "   $(printf '%s' "$DATABASE_URL" | sed -E 's#(://[^:/@]*):[^@]*@#\1:****@#')"
+  echo " To'g'risi shunday bo'lishi kerak:"
+  echo "   postgresql://USER:PAROL@dpg-xxxxxxxx-a/BAZA_NOMI"
+  echo " Render bazasi sahifasidan 'Internal Database URL' ni TO'LIQ nusxalang"
+  echo " (qo'shtirnoq va bo'sh joysiz)."
+  echo "=================================================================="
+  exit 1
+fi
+
 pip install -r backend/requirements.txt
 
 cd frontend
