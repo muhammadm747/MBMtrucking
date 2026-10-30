@@ -47,6 +47,7 @@ python manage.py migrate --noinput
 # Admin account from DJANGO_SUPERUSER_USERNAME / _EMAIL / _PASSWORD, created on the first deploy.
 # Later deploys keep its password; set DJANGO_SUPERUSER_RESET_PASSWORD=true for one deploy to force it.
 python manage.py ensure_superuser
+python manage.py email_status
 
 # Original data from the artifact; only adds missing records, safe to run on every deploy.
 python manage.py import_backup ../data/backup-2026-10-27.json

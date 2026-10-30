@@ -39,6 +39,17 @@ def find_user(login_or_email):
     return match
 
 
+def email_backend_name():
+    """"brevo", "smtp" or "console": where a sent email actually goes."""
+    return "brevo" if "Brevo" in settings.EMAIL_BACKEND else settings.EMAIL_BACKEND.split(".")[-2]
+
+
+def mask_email(email):
+    """For request logs, which should not hold full addresses: "max***740@gmail.com"."""
+    name, _, domain = email.partition("@")
+    return f"{name[:3]}***{name[-3:]}@{domain}" if len(name) > 6 else f"{name[:1]}***@{domain}"
+
+
 def password_errors(password, user):
     """Django's password validators as a list of error codes, for the SPA to translate."""
     try:
@@ -197,10 +208,15 @@ class PasswordForgotView(APIView):
         data = ForgotSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         user = find_user(data.validated_data["login"])
-        if user is None or not user.email:
+        if user is None:
+            log.info("Password reset: no matching active account, nothing sent")
+            return Response({"sent": True})
+        if not user.email:
+            log.warning("Password reset: user %s has no email, nothing sent", user.pk)
             return Response({"sent": True})
         last = PasswordResetCode.objects.filter(user=user).first()
         if last is not None and (timezone.now() - last.created_at).total_seconds() < self.resend_after:
+            log.info("Password reset: user %s asked again within %ss, nothing sent", user.pk, self.resend_after)
             return Response({"sent": True})
         record, code = PasswordResetCode.issue(user)
         try:
@@ -214,6 +230,7 @@ class PasswordForgotView(APIView):
             log.exception("Could not send the password reset email to user %s", user.pk)
             record.delete()
             return Response({"detail": "email_failed"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        log.info("Password reset: code for user %s handed to %s, to %s", user.pk, email_backend_name(), mask_email(user.email))
         return Response({"sent": True})
 
 

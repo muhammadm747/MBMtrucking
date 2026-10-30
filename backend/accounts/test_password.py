@@ -143,3 +143,46 @@ class BrevoBackendTests(APITestCase):
         self.assertEqual(body["sender"], {"email": "owner@example.com", "name": "MBM Trucking"})
         self.assertEqual(body["to"], [{"email": "m@example.com"}])
         self.assertEqual(body["textContent"], "Body 123456")
+
+
+class EmailDiagnosticsTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+
+    def test_log_tells_apart_why_nothing_was_sent(self):
+        from accounts.views import mask_email
+
+        get_user_model().objects.create_user("noemail", password="x-pass-12345")
+        with self.assertLogs("accounts.views", level="INFO") as logs:
+            self.client.post(FORGOT, {"login": "noemail"}, format="json")
+            self.client.post(FORGOT, {"login": "nobody"}, format="json")
+        text = "\n".join(logs.output)
+        self.assertIn("has no email", text)
+        self.assertIn("no matching active account", text)
+        self.assertEqual(mask_email("maxmudobmuhammad740@gmail.com"), "max***740@gmail.com")
+
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_log_never_contains_the_code_or_full_address(self):
+        get_user_model().objects.create_user("owner", email="someone.private@example.com", password="x-pass-12345")
+        with self.assertLogs("accounts.views", level="INFO") as logs:
+            self.client.post(FORGOT, {"login": "owner"}, format="json")
+        code = re.search(r"\b(\d{6})\b", mail.outbox[0].body).group(1)
+        text = "\n".join(logs.output)
+        self.assertNotIn(code, text)
+        self.assertNotIn("someone.private", text)
+
+    def test_status_command_prints_setup_without_secrets(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        get_user_model().objects.create_user("Muhammad", email="abcdefgh@example.com", password="x-pass-12345")
+        out = StringIO()
+        with mock.patch.dict("os.environ", {"DJANGO_SUPERUSER_USERNAME": "muhammad"}):
+            with override_settings(EMAIL_BACKEND="accounts.email_backends.BrevoEmailBackend", BREVO_API_KEY="xkeysib-secret",
+                                   DEFAULT_FROM_EMAIL="MBM <sender@example.com>"):
+                call_command("email_status", stdout=out)
+        text = out.getvalue()
+        self.assertIn("Email backend: brevo", text)
+        self.assertIn("Admin 'Muhammad' email: abcdefgh@example.com", text)
+        self.assertNotIn("xkeysib", text)

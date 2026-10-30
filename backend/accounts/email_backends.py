@@ -31,7 +31,8 @@ class BrevoEmailBackend(BaseEmailBackend):
                 headers={"api-key": settings.BREVO_API_KEY, "content-type": "application/json", "accept": "application/json"},
             )
             try:
-                with urllib.request.urlopen(request, timeout=15):
+                with urllib.request.urlopen(request, timeout=15) as response:
+                    log.info("Brevo accepted the email: HTTP %s", response.status)
                     sent += 1
             except (urllib.error.URLError, TimeoutError) as exc:
                 detail = exc.read().decode(errors="replace")[:300] if isinstance(exc, urllib.error.HTTPError) else exc
