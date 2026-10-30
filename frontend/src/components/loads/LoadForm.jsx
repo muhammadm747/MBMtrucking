@@ -3,7 +3,7 @@ import { useI18n } from '../../i18n/index.jsx';
 import { addDays, daysBetween, isDate, todayNY } from '../../lib/dates.js';
 import { cmpLoads } from '../../lib/engine.js';
 import { fmtMiles, parseNum, usd } from '../../lib/format.js';
-import { geocode, isCached, mapsUrl, routeMiles, shortPlace } from '../../lib/miles.js';
+import { geocode, mapsUrl, routeMiles, shortPlace } from '../../lib/miles.js';
 import { errorText, truckName, useData } from '../../state/DataContext.jsx';
 import { useLoadUi } from '../../state/LoadUiContext.jsx';
 import { useToast } from '../../state/ToastContext.jsx';
@@ -106,9 +106,7 @@ export default function LoadForm() {
       const ga = known('pickup', a) || await geocode(a);
       if (my !== calcId.current) return;
       if (!ga) return done(t('"{x}" topilmadi. Shahar va shtatni yozing (Dallas, TX).', { x: a }), 'bad');
-      let gb = known('delivery', b);
-      if (!gb && !coords.current.pickup && !isCached(b)) await new Promise((r) => setTimeout(r, 1100)); // Nominatim: max 1 request/second
-      gb = gb || await geocode(b);
+      const gb = known('delivery', b) || await geocode(b);
       if (my !== calcId.current) return;
       if (!gb) return done(t('"{x}" topilmadi. Shahar va shtatni yozing (Dallas, TX).', { x: b }), 'bad');
       const mi = await routeMiles(ga, gb);
@@ -137,7 +135,7 @@ export default function LoadForm() {
 
   /** A suggestion was chosen: keep its coordinates and, once both stops are known, fill in the miles. */
   const pickAddress = (p, it) => {
-    coords.current[p] = { lat: it.lat, lon: it.lon };
+    coords.current[p] = it.lat != null ? { lat: it.lat, lon: it.lon } : null;
     set(p + '_address', it.label);
     calcMiles(true, { [p + '_address']: it.label }, true);
   };

@@ -56,8 +56,8 @@ Admin panel: http://localhost:8000/admin/
 ## Testlar
 
 ```powershell
-cd backend;  .\.venv\Scripts\python.exe manage.py test   # 55 ta test: API, akkauntlar, parol tiklash, validatsiya, zaxira
-cd frontend; npm test                                     # 12 ta test: foyda/rent/driver hisob-kitobi
+cd backend;  .\.venv\Scripts\python.exe manage.py test   # 57 ta test: API, akkauntlar, parol tiklash, validatsiya, zaxira
+cd frontend; npm test                                     # 26 ta test: foyda/rent/driver hisob-kitobi, manzil tozalash
 ```
 
 ## Production (bitta server)
@@ -71,6 +71,14 @@ cd ..\backend
 Keyin Django'ni WSGI server (masalan gunicorn/waitress) orqali HTTPS ortida ishga tushiring.
 Muhit o'zgaruvchilari `backend/.env.example` da. Django `frontend/dist` dagi React ilovani o'zi beradi,
 shuning uchun alohida frontend server kerak emas.
+
+## Manzillar va mile
+
+- Manzillar Esri ArcGIS orqali topiladi (AQShda uy aniqligida), u javob bermasa Photon/Nominatim (OpenStreetMap) ishlaydi.
+- Rate confirmation'dan nusxalangan yopishgan matn avtomatik tozalanadi:
+  `MANTENOCOLDSTORAGE 1260SYCAMORERD MANTENO IL60950` -> `1260 W Sycamore Rd, Manteno, IL 60950`.
+- Hozir kalitsiz ishlaydi. Esri kaliti bo'lsa, build vaqtida `VITE_ARCGIS_KEY` bilan beriladi.
+- Mile OSRM orqali, yengil mashina yo'li bo'yicha hisoblanadi, ya'ni taxminiy.
 
 ## Akkauntlar
 
