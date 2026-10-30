@@ -5,7 +5,26 @@ import { authError } from '../lib/authErrors.js';
 import { useAuth } from '../state/AuthContext.jsx';
 import { useToast } from '../state/ToastContext.jsx';
 
-function ProfileCard() {
+/** One settings line: label and current value, with its edit form opening underneath. */
+function Row({ label, value, muted, open, onToggle, children }) {
+  const { t } = useI18n();
+  return (
+    <div className={'acc-row' + (open ? ' open' : '')}>
+      <div className="acc-line">
+        <div className="acc-info">
+          <span>{label}</span>
+          <b className={muted ? 'muted' : ''}>{value}</b>
+        </div>
+        <button className="acc-edit" type="button" aria-expanded={open} onClick={onToggle}>
+          {t(open ? 'Bekor qilish' : "O'zgartirish")}
+        </button>
+      </div>
+      {open && children}
+    </div>
+  );
+}
+
+function EmailForm({ onDone }) {
   const { t } = useI18n();
   const { user, updateProfile } = useAuth();
   const toast = useToast();
@@ -22,29 +41,26 @@ function ProfileCard() {
     try {
       await updateProfile({ email: email.trim() });
       toast('Saqlandi');
+      onDone();
     } catch (err) {
       setError(authError(err, ['email']));
+      setBusy(false);
     }
-    setBusy(false);
   }
 
   return (
-    <form className="card" onSubmit={save} noValidate>
-      <div className="sech"><h2>{t('Profil')}</h2></div>
-      <label className="fld"><span>{t('Login')}</span>
-        <input type="text" value={user.username} readOnly disabled />
+    <form className="acc-form" onSubmit={save} noValidate>
+      <label className="fld"><span>{t('Yangi email')}</span>
+        <input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" autoFocus />
       </label>
-      <label className="fld"><span>Email</span>
-        <input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />
-      </label>
-      {!user.email && <p className="hint">{t("Email kiriting: parolni unutsangiz, tiklash kodi shu manzilga yuboriladi.")}</p>}
+      <p className="hint">{t('Parolni tiklash kodi shu manzilga yuboriladi, xatosiz yozilganini tekshiring.')}</p>
       {error && <p className="calcmsg bad" role="alert">{t(error)}</p>}
       <div className="actions"><button className="btn primary" type="submit" disabled={busy || !changed}>{t('Saqlash')}</button></div>
     </form>
   );
 }
 
-function PasswordCard() {
+function PasswordForm({ onDone }) {
   const { t } = useI18n();
   const toast = useToast();
   const [f, setF] = useState({ current: '', password: '', password2: '' });
@@ -61,19 +77,18 @@ function PasswordCard() {
     setError('');
     try {
       await endpoints.changePassword({ current_password: f.current, new_password: f.password });
-      setF({ current: '', password: '', password2: '' });
       toast("Parol o'zgartirildi");
+      onDone();
     } catch (err) {
       setError(authError(err, ['current_password', 'new_password']));
+      setBusy(false);
     }
-    setBusy(false);
   }
 
   return (
-    <form className="card" onSubmit={save} noValidate>
-      <div className="sech"><h2>{t("Parolni o'zgartirish")}</h2></div>
+    <form className="acc-form" onSubmit={save} noValidate>
       <label className="fld"><span>{t('Hozirgi parol')}</span>
-        <input type="password" autoComplete="current-password" value={f.current} onChange={set('current')} />
+        <input type="password" autoComplete="current-password" value={f.current} onChange={set('current')} autoFocus />
       </label>
       <div className="row2 stack-sm">
         <label className="fld"><span>{t('Yangi parol')} <small>({t('kamida 8 belgi')})</small></span>
@@ -84,7 +99,7 @@ function PasswordCard() {
         </label>
       </div>
       {(error || mismatch) && <p className="calcmsg bad" role="alert">{t(error || 'Parollar bir xil emas.')}</p>}
-      <div className="actions"><button className="btn primary" type="submit" disabled={busy || !ready}>{t("Parolni o'zgartirish")}</button></div>
+      <div className="actions"><button className="btn primary" type="submit" disabled={busy || !ready}>{t('Saqlash')}</button></div>
     </form>
   );
 }
@@ -92,17 +107,34 @@ function PasswordCard() {
 export default function AccountPage() {
   const { t } = useI18n();
   const { user, logout } = useAuth();
+  const [open, setOpen] = useState(null);
+  const toggle = (name) => setOpen((cur) => (cur === name ? null : name));
+  const close = () => setOpen(null);
+
   return (
-    <section className="panel">
-      <ProfileCard key={user.email} />
-      <PasswordCard />
-      <div className="card">
-        <div className="sech"><h2>{t('Kirish')}</h2></div>
-        <p className="hint">{t('Kirgan: {x}', { x: user.username })}. {t("Boshqa akkauntga kirish uchun shu akkauntdan chiqasiz va boshqa login hamda parolni kiritasiz. Ma'lumotlaringiz serverda saqlanib qoladi.")}</p>
-        <div className="actions">
+    <section className="panel acc">
+      <div className="card acc-card">
+        <header className="acc-head">
+          <span className="acct-avatar" aria-hidden="true">{user.username.slice(0, 1).toUpperCase()}</span>
+          <div className="acc-id">
+            <h2>{user.username}</h2>
+            <small>{t('Akkaunt sozlamalari')}</small>
+          </div>
+        </header>
+
+        <Row label="Email" value={user.email || t('Email kiritilmagan')} muted={!user.email}
+          open={open === 'email'} onToggle={() => toggle('email')}>
+          <EmailForm onDone={close} />
+        </Row>
+        <Row label={t('Parol')} value="••••••••"
+          open={open === 'password'} onToggle={() => toggle('password')}>
+          <PasswordForm onDone={close} />
+        </Row>
+
+        <footer className="acc-foot">
           <button className="btn" type="button" onClick={logout}>{t('Boshqa akkauntga kirish')}</button>
-          <button className="btn" type="button" onClick={logout}>{t('Chiqish')}</button>
-        </div>
+          <button className="btn acc-out" type="button" onClick={logout}>{t('Chiqish')}</button>
+        </footer>
       </div>
     </section>
   );

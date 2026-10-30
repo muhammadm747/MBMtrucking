@@ -139,3 +139,37 @@ a.btn.primary { color: var(--on-cta); }
 .acct-menu a:hover, .acct-menu button:hover, .acct-menu a:focus-visible, .acct-menu button:focus-visible { background: var(--surface-2); }
 .acct-menu .danger { color: var(--loss); }
 @media (max-width: 560px) { .row2.stack-sm { grid-template-columns: 1fr; } }
+
+/* ---------- account page ---------- */
+.acc { max-width: 620px; margin-inline: auto; }
+.acc-card { gap: 0; padding: 0; overflow: hidden; }
+.acc-head { display: flex; align-items: center; gap: 14px; padding: 18px 20px; }
+.acc-head .acct-avatar { width: 48px; height: 48px; font-size: 20px; }
+.acc-id { display: grid; gap: 3px; min-width: 0; }
+.acc-id h2 { margin: 0; font-size: 20px; line-height: 1.15; overflow-wrap: anywhere; }
+.acc-id small { font-size: 13px; color: var(--fg-2); }
+.acc-row { border-top: 1px solid var(--line); }
+.acc-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 66px; padding: 10px 20px; }
+.acc-info { display: grid; gap: 3px; min-width: 0; }
+.acc-info span { font-size: 12.5px; font-weight: 600; color: var(--fg-2); }
+.acc-info b { font-size: 15px; font-weight: 600; color: var(--fg); overflow-wrap: anywhere; }
+.acc-info b.muted { font-weight: 500; color: var(--fg-2); }
+.acc-edit {
+  flex: none; min-height: 38px; padding: 0 13px; border: 1px solid var(--line); border-radius: 10px;
+  background: none; color: var(--fg); font: 600 13.5px/1 var(--f-body); cursor: pointer;
+}
+.acc-edit:hover { background: var(--surface-2); }
+.acc-form { display: grid; gap: 12px; padding: 2px 20px 18px; }
+.acc-form input { min-height: 46px; }
+.acc-form .btn { min-height: 44px; padding: 0 22px; font-size: 15px; }
+.acc-form .actions .primary { flex: 0 0 auto; }
+.acc-foot { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--line); background: var(--surface-2); }
+.acc-foot .btn { min-height: 42px; padding: 0 16px; font-size: 14.5px; }
+.acc-out { margin-left: auto; border-color: transparent; background: none; color: var(--loss); }
+.acc-out:hover { background: var(--surface); }
+@media (max-width: 480px) {
+  .acc-foot { flex-wrap: nowrap; padding-inline: 14px; }
+  .acc-foot .btn { padding: 0 12px; font-size: 14px; }
+  .acc-foot .btn:first-child { flex: 1; }
+  .acc-out { margin-left: 0; }
+}
