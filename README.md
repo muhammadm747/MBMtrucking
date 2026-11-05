@@ -57,7 +57,7 @@ Admin panel: http://localhost:8000/admin/
 
 ```powershell
 cd backend;  .\.venv\Scripts\python.exe manage.py test   # 57 ta test: API, akkauntlar, parol tiklash, validatsiya, zaxira
-cd frontend; npm test                                     # 26 ta test: foyda/rent/driver hisob-kitobi, manzil tozalash
+cd frontend; npm test                                     # 31 ta test: foyda/rent/driver hisob-kitobi, manzil tozalash
 ```
 
 ## Production (bitta server)

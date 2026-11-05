@@ -173,3 +173,9 @@ a.btn.primary { color: var(--on-cta); }
   .acc-foot .btn:first-child { flex: 1; }
   .acc-out { margin-left: 0; }
 }
+
+/* Settings: Add truck button beside the Trucks heading */
+.tkhead { align-items: center; }
+
+/* Form errors must show above open sheets (.sheetbg is z-index 80) */
+.toast { z-index: 90; }
