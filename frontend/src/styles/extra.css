@@ -179,3 +179,19 @@ a.btn.primary { color: var(--on-cta); }
 
 /* Form errors must show above open sheets (.sheetbg is z-index 80) */
 .toast { z-index: 90; }
+
+/* ---------- logo ---------- */
+/* :root:root outranks the per-look .mark rules in app.css */
+:root:root .brand .mark, :root:root .hdr .mark { width: auto; height: auto; padding: 0; border-radius: 0; background: none; box-shadow: none; color: #FCA311; }
+:root:root .brand .mark svg { width: 46px; height: 42px; }
+:root:root .hdr .mark svg { width: 66px; height: 60px; }
+.brand-txt .brand-name, .hdr .brand-name { display: flex; align-items: baseline; gap: 9px; font-family: 'Montserrat', var(--f-head); font-weight: 300; line-height: 1; white-space: nowrap; }
+.brand-name span { font-weight: 300; letter-spacing: .3em; margin-right: -.3em; }
+.brand-txt .brand-name small, .hdr .brand-name small { display: inline; font-size: .42em; font-weight: 600; letter-spacing: .38em; color: #FCA311; opacity: .95; }
+.brand-txt .brand-name { font-size: 21px; }
+.hdr h1 .brand-name { font-size: clamp(28px, 7vw, 38px); }
+@media (max-width: 719px) {
+  :root:root .brand .mark svg { width: 40px; height: 36px; }
+  .brand-txt .brand-name { font-size: 18px; }
+  .brand-txt .brand-name small { display: none; }
+}

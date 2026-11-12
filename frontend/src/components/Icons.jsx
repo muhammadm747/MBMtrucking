@@ -60,16 +60,18 @@ export const IconSun = () => (
   </svg>
 );
 
+// The MBM logo mark (brand/mbm-icon-*.svg): hexagon and speed lines in currentColor, the M in --on-band.
 export const BrandMark = () => (
-  <svg viewBox="0 0 32 32" width="32" height="32" strokeWidth="1.8" {...base}>
-    <rect {...tint} x="2.5" y="8" width="17" height="13" rx="2.4" />
-    <path {...tint} d="M19.5 12.4h4.7c.6 0 1.1.3 1.5.7l3.2 3.9c.3.3.4.7.4 1.1V21h-9.8z" />
-    <path d="M22 14.4v3.2h4.2" />
-    <circle cx="8.6" cy="23" r="3" fill="currentColor" stroke="none" />
-    <circle cx="23.6" cy="23" r="3" fill="currentColor" stroke="none" />
-    <circle cx="8.6" cy="23" r="1" fill="var(--band)" stroke="none" />
-    <circle cx="23.6" cy="23" r="1" fill="var(--band)" stroke="none" />
+  <svg viewBox="-15 0 108 100" width="44" height="40" fill="none" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M48 2 L90 26 V74 L48 98 L6 74 V26 Z" stroke="currentColor" strokeWidth="4" />
+    <path d="M30 66 V36 L48 54 L66 36 V66" stroke="var(--on-band)" strokeWidth="8" />
+    <path d="M-6 44 H14 M-12 54 H18 M-6 64 H14" stroke="currentColor" strokeWidth="4.5" />
   </svg>
+);
+
+/** "MBM" with the small "TRUCKING" line, in the logo's typeface. */
+export const BrandName = ({ as: Tag = 'b' }) => (
+  <Tag className="brand-name"><span>MBM</span><small>TRUCKING</small></Tag>
 );
 
 export const EmptyTruck = () => (

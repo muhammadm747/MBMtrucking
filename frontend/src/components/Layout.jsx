@@ -5,7 +5,7 @@ import { useData } from '../state/DataContext.jsx';
 import { usePrefs } from '../state/PrefsContext.jsx';
 import AccountMenu from './AccountMenu.jsx';
 import { EmptyBox } from './common.jsx';
-import { BrandMark, IconMoon, IconSun, TabIcons } from './Icons.jsx';
+import { BrandMark, BrandName, IconMoon, IconSun, TabIcons } from './Icons.jsx';
 import LoadForm from './loads/LoadForm.jsx';
 import LoadSheet from './loads/LoadSheet.jsx';
 
@@ -32,7 +32,7 @@ function Navbar() {
         <NavLink to="/" className="brand" onClick={() => window.scrollTo(0, 0)}>
           <span className="mark" aria-hidden="true"><BrandMark /></span>
           <span className="brand-txt">
-            <b>MBM Trucking</b>
+            <BrandName />
             <small title={statusText}>
               <i className={'dot ' + status} aria-hidden="true" />
               {DOWF[dowOf(today)].slice(0, 3)}, {+today.slice(8, 10)} {MON[+today.slice(5, 7) - 1]} · NY
