@@ -1,7 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-28 -16 132 132">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -78 268 268">
   <title>MBM Trucking</title>
   
-  <g transform="translate(3 0)"><path d="M48 2 L90 26 V74 L48 98 L6 74 V26 Z" fill="none" stroke="#FCA311" stroke-width="2.5" stroke-linejoin="round"/>
-  <path d="M30 66 V36 L48 54 L66 36 V66" fill="none" stroke="#14213D" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M-6 44 H14 M-12 54 H18 M-6 64 H14" stroke="#FCA311" stroke-width="3" stroke-linecap="round"/></g>
+  
+  <rect x="40" y="36" width="140" height="40" fill="#14213D"/>
+  <path d="M184 46 H214 L236 66 V76 H184 Z" fill="#FCA311"/>
+  
+  <path d="M14 50 H32 M8 60 H32" stroke="#FCA311" stroke-width="3" stroke-linecap="round"/>
 </svg>

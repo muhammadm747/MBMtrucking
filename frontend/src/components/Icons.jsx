@@ -60,18 +60,18 @@ export const IconSun = () => (
   </svg>
 );
 
-// The MBM logo mark (brand/mbm-icon-*.svg): hexagon and speed lines in currentColor, the M in --on-band.
-export const BrandMark = () => (
-  <svg viewBox="-15 0 108 100" width="44" height="40" fill="none" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M48 2 L90 26 V74 L48 98 L6 74 V26 Z" stroke="currentColor" strokeWidth="4" />
-    <path d="M30 66 V36 L48 54 L66 36 V66" stroke="var(--on-band)" strokeWidth="8" />
-    <path d="M-6 44 H14 M-12 54 H18 M-6 64 H14" stroke="currentColor" strokeWidth="4.5" />
-  </svg>
-);
+// The MBM logo (brand/mbm-logo-*.svg): trailer lettered "MBM", amber cab, speed lines, road.
+// The lettering is Montserrat SemiBold converted to a path, so it needs no font.
+const LOGO_WORD = 'M75.65 63.50L73.17 63.50L73.17 49.50L75.31 49.50L81.43 59.72L80.31 59.72L86.33 49.50L88.47 49.50L88.49 63.50L86.03 63.50L86.01 53.36L86.53 53.36L81.41 61.90L80.25 61.90L75.05 53.36L75.65 53.36L75.65 63.50ZM111.23 63.50L104.27 63.50L104.27 49.50L110.83 49.50Q113.35 49.50 114.67 50.49Q115.99 51.48 115.99 53.14L115.99 53.14Q115.99 54.26 115.47 55.05Q114.95 55.84 114.08 56.27Q113.21 56.70 112.19 56.70L112.19 56.70L112.55 55.98Q113.73 55.98 114.67 56.41Q115.61 56.84 116.16 57.66Q116.71 58.48 116.71 59.70L116.71 59.70Q116.71 61.50 115.33 62.50Q113.95 63.50 111.23 63.50L111.23 63.50ZM106.87 51.54L106.87 61.46L111.07 61.46Q112.53 61.46 113.31 60.98Q114.09 60.50 114.09 59.44L114.09 59.44Q114.09 58.40 113.31 57.91Q112.53 57.42 111.07 57.42L111.07 57.42L106.67 57.42L106.67 55.40L110.55 55.40Q111.91 55.40 112.64 54.92Q113.37 54.44 113.37 53.48L113.37 53.48Q113.37 52.50 112.64 52.02Q111.91 51.54 110.55 51.54L110.55 51.54L106.87 51.54ZM133.97 63.50L131.49 63.50L131.49 49.50L133.63 49.50L139.75 59.72L138.63 59.72L144.65 49.50L146.79 49.50L146.81 63.50L144.35 63.50L144.33 53.36L144.85 53.36L139.73 61.90L138.57 61.90L133.37 53.36L133.97 53.36L133.97 63.50Z';
 
-/** "MBM" with the small "TRUCKING" line, in the logo's typeface. */
-export const BrandName = ({ as: Tag = 'b' }) => (
-  <Tag className="brand-name"><span>MBM</span><small>TRUCKING</small></Tag>
+export const BrandLogo = ({ title = 'MBM Trucking' }) => (
+  <svg className="brand-logo" viewBox="4 32 276 56" role="img" aria-label={title}>
+    <path d="M24 84 H276" stroke="var(--on-band)" strokeOpacity=".25" strokeWidth="2" />
+    <rect x="40" y="36" width="140" height="40" fill="var(--on-band)" />
+    <path d="M184 46 H214 L236 66 V76 H184 Z" fill="#FCA311" />
+    <path d={LOGO_WORD} fill="var(--band)" />
+    <path d="M14 50 H32 M8 60 H32" stroke="#FCA311" strokeWidth="3" strokeLinecap="round" />
+  </svg>
 );
 
 export const EmptyTruck = () => (

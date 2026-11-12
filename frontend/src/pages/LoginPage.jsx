@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BrandMark, BrandName } from '../components/Icons.jsx';
+import { BrandLogo } from '../components/Icons.jsx';
 import { useI18n } from '../i18n/index.jsx';
 import { authError, NETWORK_ERROR } from '../lib/authErrors.js';
 import { endpoints } from '../api/client.js';
@@ -202,8 +202,7 @@ export default function LoginPage() {
       <div className="band">
         <div className="wrap">
           <header className="hdr">
-            <span className="mark" aria-hidden="true"><BrandMark /></span>
-            <div className="htxt"><h1 aria-label="MBM Trucking"><BrandName as="span" /></h1><p>{t(subtitle)}</p></div>
+            <div className="htxt"><h1><BrandLogo /></h1><p>{t(subtitle)}</p></div>
             <div className="hdr-tools">
               <button className="tool" type="button" onClick={() => setLang(lang === 'en' ? 'uz' : 'en')}>{lang === 'en' ? 'UZ' : 'EN'}</button>
             </div>
